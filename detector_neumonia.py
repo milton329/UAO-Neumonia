@@ -76,7 +76,7 @@ def predict(array):
 
 
 def read_dicom_file(path):
-    img = dicom.read_file(path)
+    img = dicom.dcmread(path)
     img_array = img.pixel_array
     img2show = Image.fromarray(img_array)
     img2 = img_array.astype(float)
@@ -180,8 +180,9 @@ class App:
         #   FOCUS ON PATIENT ID
         self.text1.focus_set()
 
-        #  se reconoce como un elemento de la clase
         self.array = None
+        self.label = ""
+        self.proba = 0
 
         #   NUMERO DE IDENTIFICACIÓN PARA GENERAR PDF
         self.reportID = 0
