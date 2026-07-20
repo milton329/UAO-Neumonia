@@ -127,3 +127,15 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# ML model files (large binaries, do not commit)
+*.h5
+
+# Generated reports
+Reporte*.jpg
+Reporte*.pdf
+historial.csv
+
+# uv
+.venv/
+uv.lock

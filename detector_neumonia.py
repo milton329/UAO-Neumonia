@@ -22,7 +22,7 @@ import cv2
 
 
 def model_fun():
-    model = tf.keras.models.load_model("WilhemNet86.h5")
+    model = tf.keras.models.load_model("conv_MLP_84.h5")
     return model
 
 
