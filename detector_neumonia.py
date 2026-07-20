@@ -34,7 +34,13 @@ def grad_cam(array):
         inputs = tf.cast(img, tf.float32)
         outputs = grad_model(inputs)
         conv_outputs = outputs[0]
-        predictions = tf.cast(outputs[1], tf.float32)
+        # Handle single tensor or list of tensors from multi-output models
+        if len(outputs) == 2:
+            raw_preds = tf.cast(outputs[1], tf.float32)
+        else:
+            raw_preds = tf.stack([tf.reshape(tf.cast(outputs[i], tf.float32), [-1]) for i in range(1, len(outputs))], axis=0)
+            raw_preds = tf.expand_dims(raw_preds, 0)
+        predictions = tf.reshape(raw_preds, [1, -1])
         argmax = int(np.argmax(predictions[0]))
         loss = predictions[:, argmax]
     grads = tape.gradient(loss, conv_outputs)
