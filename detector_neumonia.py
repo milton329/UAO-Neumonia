@@ -32,8 +32,10 @@ def grad_cam(array):
     )
     with tf.GradientTape() as tape:
         inputs = tf.cast(img, tf.float32)
-        conv_outputs, predictions = grad_model(inputs)
-        argmax = np.argmax(predictions[0])
+        outputs = grad_model(inputs)
+        conv_outputs = outputs[0]
+        predictions = tf.cast(outputs[1], tf.float32)
+        argmax = int(np.argmax(predictions[0]))
         loss = predictions[:, argmax]
     grads = tape.gradient(loss, conv_outputs)
     pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
