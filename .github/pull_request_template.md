@@ -1,33 +1,74 @@
-## Tipo de cambio
-- [ ] 🚀 Feature (nueva funcionalidad)
-- [ ] 🐛 Bugfix (corrección de error)
-- [ ] 🔥 Hotfix (corrección urgente en producción/main)
-- [ ] ♻️ Refactor (cambio de estructura sin alterar comportamiento)
-- [ ] 📝 Docs (documentación)
-- [ ] 🧪 Test (agregar o corregir pruebas)
+### 📝 Convención del título del PR
+Usa un [prefijo convencional](https://www.conventionalcommits.org/) para clasificar el tipo de trabajo:
 
-## Rama origen → destino
-<!-- ej: feature/grad-cam → develop -->
+| Prefijo | Cuándo usarlo | Ejemplo |
+|---------|---------------|---------|
+| `feat:` | Nueva funcionalidad | `feat: agrega módulo grad-cam` |
+| `fix:` | Corrección de errores | `fix: corrige carga de modelo en integrator` |
+| `refactor:` | Cambio de estructura sin alterar comportamiento | `refactor: separa preprocess_img en módulo propio` |
+| `test:` | Agregar o corregir pruebas | `test: agrega pruebas unitarias de preprocess` |
+| `chore:` | Mantenimiento (docs, dependencias, configuración) | `chore: agrega workflow de CI` |
 
-## Problema
-<!-- ¿Qué estaba mal o qué faltaba? Sé específico: error, traceback, requerimiento no cumplido, etc. -->
+### 📝 Tipo de PR
+- [ ] **Código del proyecto** 🏭 — Requiere aprobación de al menos 1 compañero y (si aplica) que pase el CI con el umbral de cobertura acordado.
+- [ ] **Exploración / Docs** 🔍 — Notebooks, documentación, ajustes de configuración, README, etc. También requiere revisión de un compañero.
 
-## Solución
+---
+
+### 📚 Descripción
+<!---
+Describe qué logra este PR. Llena todas las secciones que apliquen — ayuda a quien revise
+y a quien retome este código más adelante a entender el cambio sin tener que adivinar.
+-->
+
+**Rama origen → destino:** <!-- ej: feature/grad-cam → develop -->
+
+**Resuelve / relacionado con:** <!-- Link al Issue de GitHub si existe, o descripción corta del problema -->
+
+**Documentación relacionada (opcional):** <!-- Link a README, diagrama, etc. actualizado por este cambio -->
+
+#### Problema
+<!-- ¿Qué estaba mal o qué faltaba? Sé específico: traceback, requerimiento no cumplido, deuda técnica, etc. -->
+
+#### Solución
 <!-- ¿Qué hiciste para resolverlo? Lista los cambios clave. -->
 -
 -
 
-## ¿Cómo se probó?
+#### Otros cambios / varios
+<!---
+Idealmente no debería haber nada aquí, pero si tocaste algo fuera del alcance
+principal del PR, anótalo para que el revisor no se sorprenda.
+-->
+
+#### A quién/qué afecta
+<!-- Menciona con @ a compañeros cuyo trabajo (otra rama feature, un módulo compartido) se ve afectado por este cambio -->
+
+#### ¿Cómo se probó?
+<!-- Cómo verificaste que funciona. Adjunta capturas de la GUI, output de pytest, etc. -->
 - [ ] Pruebas unitarias (pytest) añadidas/actualizadas
 - [ ] Probado manualmente ejecutando la app
-- [ ] No se probó (explicar por qué)
+- [ ] No se probó (explica por qué)
 
-## Pendientes / Follow-ups
-<!-- Lo que queda por hacer después de este PR, para no perderlo de vista -->
-- [ ]
+---
 
-## Checklist antes de pedir revisión
+### ✅ Checklist antes de pedir revisión
 - [ ] El código corre sin errores
 - [ ] No dejé prints/debug de más
+- [ ] Las pruebas unitarias pasan localmente (`pytest`)
 - [ ] Actualicé el README si aplica
 - [ ] Le pedí revisión a al menos 1 compañero
+
+---
+
+### 🚀 Build & Post-merge
+> Estos pasos aplican sobre todo a PRs de **Código del proyecto**; para **Exploración/Docs** puedes marcarlos como N/A.
+
+#### 📦 Checklist antes de mergear
+- [ ] El CI (GitHub Actions) pasó: tests + cobertura mínima acordada por el equipo
+- [ ] La imagen de Docker sigue construyendo correctamente (`docker build .`)
+- [ ] Confirmé que la rama destino es la correcta (`feature/* → develop`, y solo `develop → main` para entregas)
+
+#### 🧹 Pendientes / Follow-ups
+<!-- Lo que queda por hacer después de este PR, para no perderlo de vista -->
+- [ ]
