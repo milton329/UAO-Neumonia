@@ -13,29 +13,44 @@ import tkcap
 import img2pdf
 import numpy as np
 import time
-tf.compat.v1.disable_eager_execution()
-tf.compat.v1.experimental.output_all_intermediates(True)
+import tensorflow as tf
+import pydicom as dicom
 import cv2
+
+
+def model_fun():
+    model = tf.keras.models.load_model("conv_MLP_84.h5", compile=False)
+    return model
 
 
 def grad_cam(array):
     img = preprocess(array)
     model = model_fun()
-    preds = model.predict(img)
-    argmax = np.argmax(preds[0])
-    output = model.output[:, argmax]
-    last_conv_layer = model.get_layer("conv10_thisone")
-    grads = K.gradients(output, last_conv_layer.output)[0]
-    pooled_grads = K.mean(grads, axis=(0, 1, 2))
-    iterate = K.function([model.input], [pooled_grads, last_conv_layer.output[0]])
-    pooled_grads_value, conv_layer_output_value = iterate(img)
-    for filters in range(64):
-        conv_layer_output_value[:, :, filters] *= pooled_grads_value[filters]
-    # creating the heatmap
-    heatmap = np.mean(conv_layer_output_value, axis=-1)
-    heatmap = np.maximum(heatmap, 0)  # ReLU
-    heatmap /= np.max(heatmap)  # normalize
-    heatmap = cv2.resize(heatmap, (img.shape[1], img.shape[2]))
+    grad_model = tf.keras.models.Model(
+        inputs=model.inputs,
+        outputs=[model.get_layer("conv10_thisone").output, model.output]
+    )
+    with tf.GradientTape() as tape:
+        inputs = tf.cast(img, tf.float32)
+        outputs = grad_model(inputs)
+        conv_outputs = outputs[0]
+        # Handle single tensor or list of tensors from multi-output models
+        if len(outputs) == 2:
+            raw_preds = tf.cast(outputs[1], tf.float32)
+        else:
+            raw_preds = tf.stack([tf.reshape(tf.cast(outputs[i], tf.float32), [-1]) for i in range(1, len(outputs))], axis=0)
+            raw_preds = tf.expand_dims(raw_preds, 0)
+        predictions = tf.reshape(raw_preds, [1, -1])
+        argmax = int(np.argmax(predictions[0]))
+        loss = predictions[:, argmax]
+    grads = tape.gradient(loss, conv_outputs)
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+    conv_outputs = conv_outputs[0]
+    heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
+    heatmap = tf.squeeze(heatmap).numpy()
+    heatmap = np.maximum(heatmap, 0)
+    heatmap /= np.max(heatmap)
+    heatmap = cv2.resize(heatmap, (512, 512))
     heatmap = np.uint8(255 * heatmap)
     heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
     img2 = cv2.resize(array, (512, 512))
@@ -68,7 +83,7 @@ def predict(array):
 
 
 def read_dicom_file(path):
-    img = dicom.read_file(path)
+    img = dicom.dcmread(path)
     img_array = img.pixel_array
     img2show = Image.fromarray(img_array)
     img2 = img_array.astype(float)
@@ -172,8 +187,9 @@ class App:
         #   FOCUS ON PATIENT ID
         self.text1.focus_set()
 
-        #  se reconoce como un elemento de la clase
         self.array = None
+        self.label = ""
+        self.proba = 0
 
         #   NUMERO DE IDENTIFICACIÓN PARA GENERAR PDF
         self.reportID = 0
@@ -194,16 +210,19 @@ class App:
             ),
         )
         if filepath:
-            self.array, img2show = read_dicom_file(filepath)
-            self.img1 = img2show.resize((250, 250), Image.ANTIALIAS)
+            if filepath.endswith(".dcm"):
+                self.array, img2show = read_dicom_file(filepath)
+            else:
+                self.array, img2show = read_jpg_file(filepath)
+            self.img1 = img2show.resize((250, 250), Image.LANCZOS)
             self.img1 = ImageTk.PhotoImage(self.img1)
             self.text_img1.image_create(END, image=self.img1)
-            self.button1["state"] = "enabled"
+            self.button1["state"] = "normal"
 
     def run_model(self):
         self.label, self.proba, self.heatmap = predict(self.array)
         self.img2 = Image.fromarray(self.heatmap)
-        self.img2 = self.img2.resize((250, 250), Image.ANTIALIAS)
+        self.img2 = self.img2.resize((250, 250), Image.LANCZOS)
         self.img2 = ImageTk.PhotoImage(self.img2)
         print("OK")
         self.text_img2.image_create(END, image=self.img2)
@@ -237,8 +256,8 @@ class App:
             self.text1.delete(0, "end")
             self.text2.delete(1.0, "end")
             self.text3.delete(1.0, "end")
-            self.text_img1.delete(self.img1, "end")
-            self.text_img2.delete(self.img2, "end")
+            self.text_img1.delete("1.0", "end")
+            self.text_img2.delete("1.0", "end")
             showinfo(title="Borrar", message="Los datos se borraron con éxito")
 
 
