@@ -19,12 +19,13 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
     "ruff>=0.16.0",
 ]
 
 [tool.pytest.ini_options]
-# "." en pythonpath: detector_neumonia.py vive en la raíz del repo, no en un
-# paquete instalable, así que pytest necesita la raíz en sys.path para poder
-# importarlo desde tests/.
+# "." en pythonpath: los módulos (detector_neumonia.py, integrator.py, etc.)
+# viven en la raíz del repo, no en un paquete instalable, así que pytest
+# necesita la raíz en sys.path para poder importarlos desde tests/.
 pythonpath = ["."]
 testpaths = ["tests"]
