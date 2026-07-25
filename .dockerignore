@@ -1,0 +1,48 @@
+# =============================================================================
+# .dockerignore - UAO Neumonía
+# Excluye del contexto de build todo lo que no necesita viajar al daemon de
+# Docker: sin esto, "COPY . ." arrastraría el modelo de ~117MB, el entorno
+# virtual local, el historial de git, etc., inflando y ralentizando el build.
+# =============================================================================
+
+# Control de versiones
+.git/
+.github/
+
+# Entornos virtuales y cachés de Python (se reconstruyen dentro de la imagen)
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Modelos y pesos entrenados: se montan como volumen en tiempo de ejecución,
+# no se hornean dentro de la imagen (ver comentario VOLUME en el Dockerfile).
+models/
+*.h5
+*.hdf5
+*.keras
+*.pb
+*.onnx
+*.pt
+*.pth
+
+# Artefactos generados en tiempo de ejecución por la aplicación
+historial.csv
+Reporte*.jpg
+Reporte*.pdf
+
+# Documentación y metadatos que no afectan el runtime de la imagen
+README.md
+*.md
+
+# Editores / IDEs / sistema operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
