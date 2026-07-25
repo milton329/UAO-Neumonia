@@ -1,80 +1,74 @@
-### 📝 PR Title Convention
-Use a [conventional prefix](https://www.conventionalcommits.org/) in your PR title to help classify the type of work:
+### 📝 Convención del título del PR
+Usa un [prefijo convencional](https://www.conventionalcommits.org/) para clasificar el tipo de trabajo:
 
-| Prefix | When to use | Example |
-|--------|-------------|---------|
-| `feat:` | New feature work | `feat: add lead scoring model v2` |
-| `fix:` | Bug fixes | `fix: correct null handling in feature pipeline` |
-| `chore:` | Maintenance (doc updates, refactors, package updates) | `chore: upgrade metaflow to 2.11` |
+| Prefijo | Cuándo usarlo | Ejemplo |
+|---------|---------------|---------|
+| `feat:` | Nueva funcionalidad | `feat: agrega módulo grad-cam` |
+| `fix:` | Corrección de errores | `fix: corrige carga de modelo en integrator` |
+| `refactor:` | Cambio de estructura sin alterar comportamiento | `refactor: separa preprocess_img en módulo propio` |
+| `test:` | Agregar o corregir pruebas | `test: agrega pruebas unitarias de preprocess` |
+| `chore:` | Mantenimiento (docs, dependencias, configuración) | `chore: agrega workflow de CI` |
 
-### 📝 PR Type
-- [ ] **Production Code** 🏭 - Requires ml-leads approval, linked to a Jira ticket, and an approved Change Request (CR)
-- [ ] **Other** 🔍 - Peer approval is required for all non-production code, including, but not limited to: EDA, Reporting Dashboards, Infrastructure, etc.
-
----
-
-### 📚 Description
-<!---
-Describe what is achieved as a result of this PR.
-Please fill out all sections of this template — it helps reviewers,
-automation, and future contributors understand your change.
--->
-
-**Resolves:** <!-- Link the JIRA issue here -->
-
-**CR:** <!-- Link or number of the Change Request (e.g., CR-12345). Required for Production Code. This enables automated CR linkage. -->
-
-**Documentation Link (optional):** <!-- Link to any updated documentation here -->
-
-
-#### Other changes / misc.
-<!---
-Ideally, there should be nothing here, but if you needed to
-make changes to other pieces of code outside the scope of the
-parent ticket, note them here
--->
-
-#### Affects
-<!---
-Call out any global processes or other projects or people affected by this change. Use @mention.
--->
-
-#### How it was tested
-<!---
-How did you test that this code works? Attach code or screenshots to help, if necessary
--->
+### 📝 Tipo de PR
+- [ ] **Código del proyecto** 🏭 — Requiere aprobación de al menos 1 compañero y (si aplica) que pase el CI con el umbral de cobertura acordado.
+- [ ] **Exploración / Docs** 🔍 — Notebooks, documentación, ajustes de configuración, README, etc. También requiere revisión de un compañero.
 
 ---
 
-### ✅ Pre-PR Checklist
-This is your final check before asking for a review. Refer to this [Confluence doc](https://moveinc.atlassian.net/wiki/x/t4BTTBs) for detailed standards.
+### 📚 Descripción
+<!---
+Describe qué logra este PR. Llena todas las secciones que apliquen — ayuda a quien revise
+y a quien retome este código más adelante a entender el cambio sin tener que adivinar.
+-->
 
-- [ ] [Typing](https://moveinc.atlassian.net/wiki/spaces/ML/pages/117244657847/Data+Science+Pre-PR+Review+Checks#Typing-Checks)
-- [ ] [String checks](https://moveinc.atlassian.net/wiki/spaces/ML/pages/117244657847/Data+Science+Pre-PR+Review+Checks#String-Checks)
-- [ ] [Code Structure](https://moveinc.atlassian.net/wiki/spaces/ML/pages/117244657847/Data+Science+Pre-PR+Review+Checks#Basic)
-- [ ] [SQL Checks](https://moveinc.atlassian.net/wiki/spaces/ML/pages/117244657847/Data+Science+Pre-PR+Review+Checks#SQL-Checks)
-- [ ] [Metaflow Checks](https://moveinc.atlassian.net/wiki/spaces/ML/pages/117244657847/Data+Science+Pre-PR+Review+Checks#System%2FMetaflow-Checks)
+**Rama origen → destino:** <!-- ej: feature/grad-cam → develop -->
+
+**Resuelve / relacionado con:** <!-- Link al Issue de GitHub si existe, o descripción corta del problema -->
+
+**Documentación relacionada (opcional):** <!-- Link a README, diagrama, etc. actualizado por este cambio -->
+
+#### Problema
+<!-- ¿Qué estaba mal o qué faltaba? Sé específico: traceback, requerimiento no cumplido, deuda técnica, etc. -->
+
+#### Solución
+<!-- ¿Qué hiciste para resolverlo? Lista los cambios clave. -->
+-
+-
+
+#### Otros cambios / varios
+<!---
+Idealmente no debería haber nada aquí, pero si tocaste algo fuera del alcance
+principal del PR, anótalo para que el revisor no se sorprenda.
+-->
+
+#### A quién/qué afecta
+<!-- Menciona con @ a compañeros cuyo trabajo (otra rama feature, un módulo compartido) se ve afectado por este cambio -->
+
+#### ¿Cómo se probó?
+<!-- Cómo verificaste que funciona. Adjunta capturas de la GUI, output de pytest, etc. -->
+- [ ] Pruebas unitarias (pytest) añadidas/actualizadas
+- [ ] Probado manualmente ejecutando la app
+- [ ] No se probó (explica por qué)
 
 ---
 
-### 🚀 Deployment & Post-Merge
-This section outlines the steps required to get your code into production and maintain it afterward.
+### ✅ Checklist antes de pedir revisión
+- [ ] El código corre sin errores
+- [ ] No dejé prints/debug de más
+- [ ] Las pruebas unitarias pasan localmente (`pytest`)
+- [ ] Actualicé el README si aplica
+- [ ] Le pedí revisión a al menos 1 compañero
 
-> **Note**: These steps are mandatory for Production Code 🏭 but not required for Exploratory Data Analysis (EDA) 🔍 PRs. Before completing the next section, please review the [Change Management Training – Jira Workflow](https://moveinc.atlassian.net/wiki/x/xYLTgRs) to complete the required URM-related checks.
+---
 
-#### 📦 Deployment Checklist
-- [ ] Unified Release Management (URM) Change Request (CR) is approved.
-- [ ] Change Advisory Board (CAB) review is approved if required (check one):
-  - [ ] Link to CAB approval: {add link}
-  - [ ] CAB approval not required
-- [ ] Update `ml/infra/omek_production_flows.yaml`. See [Pushing a flow to Production](https://moveinc.atlassian.net/wiki/x/EgBcaRs) for information
-- [ ] Ensure dry deployment succeedes in circleci
-- [ ] Ensure the correct Slack notification webhook is set. See `omek_production_flows.yaml` to know about the available webhooks.
-- [ ] Monitor the progress of the deployment workflow in CircleCI. See [Navigating to CircleCI from GitHub](https://moveinc.atlassian.net/wiki/spaces/ML/pages/117731754002/Pushing+a+flow+to+Production#Navigating-to-CircleCI-from-GitHub) for more information
+### 🚀 Build & Post-merge
+> Estos pasos aplican sobre todo a PRs de **Código del proyecto**; para **Exploración/Docs** puedes marcarlos como N/A.
 
+#### 📦 Checklist antes de mergear
+- [ ] El CI (GitHub Actions) pasó: tests + cobertura mínima acordada por el equipo
+- [ ] La imagen de Docker sigue construyendo correctamente (`docker build .`)
+- [ ] Confirmé que la rama destino es la correcta (`feature/* → develop`, y solo `develop → main` para entregas)
 
-#### 🧹 Cleanup & Maintenance (Post-Merge)
-<!---
-What do you need to do after this is merged? Make sure to check them off when you do them!
--->
-* [ ] **Monitor and validate data** in production to ensure the change is working as expected.
+#### 🧹 Pendientes / Follow-ups
+<!-- Lo que queda por hacer después de este PR, para no perderlo de vista -->
+- [ ]

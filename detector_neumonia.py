@@ -189,8 +189,9 @@ class App:
         #   FOCUS ON PATIENT ID
         self.text1.focus_set()
 
-        #  se reconoce como un elemento de la clase
         self.array = None
+        self.label = ""
+        self.proba = 0
 
         #   NUMERO DE IDENTIFICACIÓN PARA GENERAR PDF
         self.reportID = 0
@@ -211,7 +212,10 @@ class App:
             ),
         )
         if filepath:
-            self.array, img2show = read_dicom_file(filepath)
+            if filepath.endswith(".dcm"):
+                self.array, img2show = read_dicom_file(filepath)
+            else:
+                self.array, img2show = read_jpg_file(filepath)
             self.img1 = img2show.resize((250, 250), Image.LANCZOS)
             self.img1 = ImageTk.PhotoImage(self.img1)
             self.text_img1.image_create(END, image=self.img1)
@@ -252,8 +256,8 @@ class App:
             self.text1.delete(0, "end")
             self.text2.delete(1.0, "end")
             self.text3.delete(1.0, "end")
-            self.text_img1.delete(self.img1, "end")
-            self.text_img2.delete(self.img2, "end")
+            self.text_img1.delete("1.0", "end")
+            self.text_img2.delete("1.0", "end")
             showinfo(title="Borrar", message="Los datos se borraron con éxito")
 
 
