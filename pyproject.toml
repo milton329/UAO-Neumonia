@@ -13,7 +13,6 @@ dependencies = [
     "pydicom>=3.0.2",
     "python-xlib>=0.33 ; sys_platform == 'linux'",
     "tensorflow>=2.21.0",
-    "tkcap>=0.0.4",
 ]
 
 [dependency-groups]
@@ -24,8 +23,8 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-# "." en pythonpath: los módulos (detector_neumonia.py, integrator.py, etc.)
-# viven en la raíz del repo, no en un paquete instalable, así que pytest
-# necesita la raíz en sys.path para poder importarlos desde tests/.
-pythonpath = ["."]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

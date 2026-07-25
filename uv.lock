@@ -1164,15 +1164,6 @@ wheels = [
 ]
 
 [[package]]
-name = "tkcap"
-version = "0.0.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyautogui" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6e/ad/1c695117e831f7b6803b9d18ff5ed21d42295866a0d96e7e2bf9389d6457/tkcap-0.0.4.tar.gz", hash = "sha256:165e04828c143536077dfc120d44e10ed2d1f100b5b971b3469cb8eab4f570db", size = 4634, upload-time = "2024-09-13T12:41:58.795Z" }
-
-[[package]]
 name = "typing-extensions"
 version = "4.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1203,7 +1194,6 @@ dependencies = [
     { name = "pydicom" },
     { name = "python-xlib", marker = "sys_platform == 'linux'" },
     { name = "tensorflow" },
-    { name = "tkcap" },
 ]
 
 [package.dev-dependencies]
@@ -1223,7 +1213,6 @@ requires-dist = [
     { name = "pydicom", specifier = ">=3.0.2" },
     { name = "python-xlib", marker = "sys_platform == 'linux'", specifier = ">=0.33" },
     { name = "tensorflow", specifier = ">=2.21.0" },
-    { name = "tkcap", specifier = ">=0.0.4" },
 ]
 
 [package.metadata.requires-dev]

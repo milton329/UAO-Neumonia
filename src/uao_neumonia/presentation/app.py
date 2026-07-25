@@ -1,32 +1,39 @@
-#!/usr/bin/env python
-"""Interfaz gráfica (Tkinter) de la herramienta de detección de neumonía."""
+"""Interfaz gráfica de usuario de la herramienta de detección de neumonía.
 
-import csv
+Ventana construida con Tkinter que permite cargar una radiografía,
+ejecutar la predicción, visualizar el heatmap Grad-CAM, guardar el
+resultado en el historial CSV y exportar un reporte PDF.
+"""
+
 from tkinter import END, StringVar, Text, Tk, filedialog, font, ttk
 from tkinter.messagebox import WARNING, askokcancel, showinfo
 
-import tkcap
+import numpy as np
 from PIL import Image, ImageTk
 
-from integrator import predict
-from read_img import read_dicom_file, read_jpg_file
+from uao_neumonia.application.prediction_service import predict
+from uao_neumonia.domain.models import PredictionResult
+from uao_neumonia.infrastructure.csv_history import save_record
+from uao_neumonia.infrastructure.image_reader import read_dicom, read_standard_image
+from uao_neumonia.infrastructure.pdf_exporter import export_pdf
 
 
 class App:
-    """Ventana principal: carga una radiografía, ejecuta la predicción y
-    permite guardar/exportar el resultado."""
+    """Ventana principal de la aplicación.
 
+    Gestiona la carga de imágenes, la ejecución del modelo, la
+    visualización de resultados y la exportación a CSV/PDF.
+    """
     def __init__(self):
+        """Inicializa la ventana, widgets y entra en el bucle de eventos."""
         self.root = Tk()
         self.root.title("Herramienta para la detección rápida de neumonía")
 
-        #   BOLD FONT
         fonti = font.Font(weight="bold")
 
         self.root.geometry("815x560")
         self.root.resizable(0, 0)
 
-        #   LABELS
         self.lab1 = ttk.Label(self.root, text="Imagen Radiográfica", font=fonti)
         self.lab2 = ttk.Label(self.root, text="Imagen con Heatmap", font=fonti)
         self.lab3 = ttk.Label(self.root, text="Resultado:", font=fonti)
@@ -38,23 +45,18 @@ class App:
         )
         self.lab6 = ttk.Label(self.root, text="Probabilidad:", font=fonti)
 
-        #   TWO STRING VARIABLES TO CONTAIN ID AND RESULT
         self.ID = StringVar()
         self.result = StringVar()
 
-        #   TWO INPUT BOXES
         self.text1 = ttk.Entry(self.root, textvariable=self.ID, width=10)
 
-        #   GET ID
         self.ID_content = self.text1.get()
 
-        #   TWO IMAGE INPUT BOXES
         self.text_img1 = Text(self.root, width=31, height=15)
         self.text_img2 = Text(self.root, width=31, height=15)
         self.text2 = Text(self.root)
         self.text3 = Text(self.root)
 
-        #   BUTTONS
         self.button1 = ttk.Button(
             self.root, text="Predecir", state="disabled", command=self.run_model
         )
@@ -67,7 +69,6 @@ class App:
             self.root, text="Guardar", command=self.save_results_csv
         )
 
-        #   WIDGETS POSITIONS
         self.lab1.place(x=110, y=65)
         self.lab2.place(x=545, y=65)
         self.lab3.place(x=500, y=350)
@@ -85,20 +86,21 @@ class App:
         self.text_img1.place(x=65, y=90)
         self.text_img2.place(x=500, y=90)
 
-        #   FOCUS ON PATIENT ID
         self.text1.focus_set()
 
-        self.array = None
+        self.array: np.ndarray | None = None
         self.label = ""
-        self.proba = 0
+        self.proba = 0.0
+        self.heatmap: np.ndarray | None = None
 
-        #   RUN LOOP
         self.root.mainloop()
 
-    #   METHODS
     def load_img_file(self):
-        """Abre el explorador de archivos, lee la imagen (DICOM o JPG/PNG)
-        seleccionada y la muestra en el panel izquierdo."""
+        """Abre el explorador de archivos y carga una radiografía.
+
+        Lee la imagen (DICOM o JPG/PNG) seleccionada, la muestra en el
+        panel izquierdo y habilita el botón Predecir.
+        """
         filepath = filedialog.askopenfilename(
             initialdir="/",
             title="Select image",
@@ -111,54 +113,59 @@ class App:
         )
         if filepath:
             if filepath.endswith(".dcm"):
-                self.array, img2show = read_dicom_file(filepath)
+                self.array, img2show = read_dicom(filepath)
             else:
-                self.array, img2show = read_jpg_file(filepath)
+                self.array, img2show = read_standard_image(filepath)
             self.img1 = img2show.resize((250, 250), Image.LANCZOS)
             self.img1 = ImageTk.PhotoImage(self.img1)
             self.text_img1.image_create(END, image=self.img1)
             self.button1["state"] = "normal"
 
     def run_model(self):
-        """Ejecuta la predicción sobre la imagen cargada y muestra el
-        resultado (clase, probabilidad y heatmap Grad-CAM) en la interfaz."""
-        self.label, self.proba, self.heatmap = predict(self.array)
+        """Ejecuta la predicción y muestra los resultados.
+
+        Obtiene la clase, probabilidad y heatmap Grad-CAM a través del
+        servicio de predicción y los despliega en la interfaz.
+        """
+        result: PredictionResult = predict(self.array)
+        self.label = result.label
+        self.proba = result.probability
+        self.heatmap = result.heatmap
         self.img2 = Image.fromarray(self.heatmap)
         self.img2 = self.img2.resize((250, 250), Image.LANCZOS)
         self.img2 = ImageTk.PhotoImage(self.img2)
         self.text_img2.image_create(END, image=self.img2)
         self.text2.insert(END, self.label)
-        self.text3.insert(END, f"{self.proba:.2f}" + "%")
+        self.text3.insert(END, f"{self.proba:.2f}%")
 
-    def _cedula_paciente(self):
-        """Retorna la cédula ingresada por el usuario, o 'sin_cedula' si el
-        campo quedó vacío, para no dejar los reportes sin identificar."""
+    def _cedula_paciente(self) -> str:
+        """Retorna la cédula ingresada o un valor por defecto.
+
+        Returns:
+            Cédula del paciente, o ``"sin_cedula"`` si el campo está vacío.
+        """
         cedula = self.text1.get().strip()
         return cedula if cedula else "sin_cedula"
 
     def save_results_csv(self):
-        """Agrega el resultado actual (cédula, clase, probabilidad) al
-        historial en CSV."""
-        with open("historial.csv", "a") as csvfile:
-            w = csv.writer(csvfile, delimiter="-")
-            w.writerow([self.text1.get(), self.label, f"{self.proba:.2f}" + "%"])
-            showinfo(title="Guardar", message="Los datos se guardaron con éxito.")
+        """Guarda el resultado actual en el historial CSV."""
+        save_record(self.text1.get(), self.label, self.proba)
+        showinfo(title="Guardar", message="Los datos se guardaron con éxito.")
 
     def create_pdf(self):
-        """Genera un PDF con lo mostrado en pantalla, nombrado con la cédula
-        del paciente para no sobreescribir reportes de pacientes distintos."""
+        """Genera un reporte PDF con el diagnóstico actual."""
         cedula = self._cedula_paciente()
-        cap = tkcap.CAP(self.root)
-        ID = f"Reporte_{cedula}.jpg"
-        img = cap.capture(ID)
-        img = Image.open(ID)
-        img = img.convert("RGB")
-        pdf_path = f"Reporte_{cedula}.pdf"
-        img.save(pdf_path)
+        export_pdf(
+            patient_id=cedula,
+            original_image=self.array,
+            heatmap_image=self.heatmap,
+            label=self.label,
+            probability=self.proba,
+        )
         showinfo(title="PDF", message="El PDF fue generado con éxito.")
 
     def delete(self):
-        """Limpia los campos de la interfaz, previa confirmación del usuario."""
+        """Limpia todos los campos de la interfaz, previa confirmación."""
         answer = askokcancel(
             title="Confirmación", message="Se borrarán todos los datos.", icon=WARNING
         )
@@ -171,7 +178,14 @@ class App:
             showinfo(title="Borrar", message="Los datos se borraron con éxito")
 
 
-def main():
+def main() -> int:
+    """Punto de entrada de la aplicación gráfica.
+
+    Crea la ventana principal y entra en el bucle de eventos de Tkinter.
+
+    Returns:
+        Código de salida 0 indicando ejecución exitosa.
+    """
     App()
     return 0
 

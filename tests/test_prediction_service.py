@@ -1,16 +1,9 @@
-#!/usr/bin/env python
-"""Pruebas unitarias de integrator.predict.
-
-model_fun, preprocess y grad_cam se mockean para aislar la lógica de
-orquestación de integrator.predict de TensorFlow/OpenCV reales.
-"""
-
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
-from integrator import predict
+from uao_neumonia.application.prediction_service import predict
 
 
 def _fake_model(predictions_row):
@@ -19,10 +12,10 @@ def _fake_model(predictions_row):
     return model
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
-def test_predict_returns_a_three_item_tuple(
+@patch("uao_neumonia.application.prediction_service.generate_grad_cam")
+@patch("uao_neumonia.application.prediction_service.load_model")
+@patch("uao_neumonia.application.prediction_service.preprocess")
+def test_predict_returns_a_prediction_result(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
     mock_preprocess.return_value = np.zeros((1, 512, 512, 1))
@@ -31,13 +24,14 @@ def test_predict_returns_a_three_item_tuple(
 
     result = predict(np.zeros((256, 256, 3)))
 
-    assert isinstance(result, tuple)
-    assert len(result) == 3
+    assert result.label == "bacteriana"
+    assert result.probability == pytest.approx(90.0)
+    assert result.heatmap.shape == (512, 512, 3)
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("uao_neumonia.application.prediction_service.generate_grad_cam")
+@patch("uao_neumonia.application.prediction_service.load_model")
+@patch("uao_neumonia.application.prediction_service.preprocess")
 def test_predict_labels_class_0_as_bacteriana(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -45,14 +39,14 @@ def test_predict_labels_class_0_as_bacteriana(
     mock_model_fun.return_value = _fake_model([0.9, 0.05, 0.05])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
 
-    label, _, _ = predict(np.zeros((256, 256, 3)))
+    result = predict(np.zeros((256, 256, 3)))
 
-    assert label == "bacteriana"
+    assert result.label == "bacteriana"
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("uao_neumonia.application.prediction_service.generate_grad_cam")
+@patch("uao_neumonia.application.prediction_service.load_model")
+@patch("uao_neumonia.application.prediction_service.preprocess")
 def test_predict_labels_class_1_as_normal(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -60,14 +54,14 @@ def test_predict_labels_class_1_as_normal(
     mock_model_fun.return_value = _fake_model([0.05, 0.9, 0.05])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
 
-    label, _, _ = predict(np.zeros((256, 256, 3)))
+    result = predict(np.zeros((256, 256, 3)))
 
-    assert label == "normal"
+    assert result.label == "normal"
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("uao_neumonia.application.prediction_service.generate_grad_cam")
+@patch("uao_neumonia.application.prediction_service.load_model")
+@patch("uao_neumonia.application.prediction_service.preprocess")
 def test_predict_labels_class_2_as_viral(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -75,14 +69,14 @@ def test_predict_labels_class_2_as_viral(
     mock_model_fun.return_value = _fake_model([0.05, 0.05, 0.9])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
 
-    label, _, _ = predict(np.zeros((256, 256, 3)))
+    result = predict(np.zeros((256, 256, 3)))
 
-    assert label == "viral"
+    assert result.label == "viral"
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("uao_neumonia.application.prediction_service.generate_grad_cam")
+@patch("uao_neumonia.application.prediction_service.load_model")
+@patch("uao_neumonia.application.prediction_service.preprocess")
 def test_predict_probability_is_expressed_as_percentage(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -90,14 +84,14 @@ def test_predict_probability_is_expressed_as_percentage(
     mock_model_fun.return_value = _fake_model([0.8, 0.1, 0.1])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
 
-    _, proba, _ = predict(np.zeros((256, 256, 3)))
+    result = predict(np.zeros((256, 256, 3)))
 
-    assert proba == pytest.approx(80.0)
+    assert result.probability == pytest.approx(80.0)
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("uao_neumonia.application.prediction_service.generate_grad_cam")
+@patch("uao_neumonia.application.prediction_service.load_model")
+@patch("uao_neumonia.application.prediction_service.preprocess")
 def test_predict_passes_input_array_to_preprocess(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -112,9 +106,9 @@ def test_predict_passes_input_array_to_preprocess(
     assert np.array_equal(called_array, original_array)
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("uao_neumonia.application.prediction_service.generate_grad_cam")
+@patch("uao_neumonia.application.prediction_service.load_model")
+@patch("uao_neumonia.application.prediction_service.preprocess")
 def test_predict_passes_original_array_to_grad_cam_not_the_preprocessed_batch(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -129,17 +123,16 @@ def test_predict_passes_original_array_to_grad_cam_not_the_preprocessed_batch(
     assert np.array_equal(called_array, original_array)
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("uao_neumonia.application.prediction_service.generate_grad_cam")
+@patch("uao_neumonia.application.prediction_service.load_model")
+@patch("uao_neumonia.application.prediction_service.preprocess")
 def test_predict_returns_empty_label_for_unmapped_class(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
     mock_preprocess.return_value = np.zeros((1, 512, 512, 1))
-    # 4 clases -> argmax puede caer en el índice 3, que no está en LABELS
     mock_model_fun.return_value = _fake_model([0.1, 0.1, 0.1, 0.7])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
 
-    label, _, _ = predict(np.zeros((256, 256, 3)))
+    result = predict(np.zeros((256, 256, 3)))
 
-    assert label == ""
+    assert result.label == ""

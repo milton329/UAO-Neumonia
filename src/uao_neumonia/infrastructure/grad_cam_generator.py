@@ -1,36 +1,39 @@
-#!/usr/bin/env python
-"""Generación del mapa de calor Grad-CAM sobre la imagen de radiografía."""
+"""Generación del mapa de calor Grad-CAM sobre la radiografía.
+
+Grad-CAM (Gradient-weighted Class Activation Mapping) calcula el gradiente
+de la salida correspondiente a la clase predicha respecto a las neuronas
+de la última capa convolucional, produciendo un heatmap que resalta las
+regiones más influyentes en la decisión del modelo.
+"""
 
 import cv2
 import numpy as np
 import tensorflow as tf
 
-from load_model import model_fun
-from preprocess_img import preprocess
+from uao_neumonia.config import CONV_LAYER_NAME, HEATMAP_OPACITY, IMG_SIZE
+from uao_neumonia.infrastructure.image_processor import preprocess
+from uao_neumonia.infrastructure.model_loader import load_model
 
 
-def grad_cam(array):
-    """Genera una imagen con un mapa de calor Grad-CAM superpuesto, resaltando
-    las regiones de la radiografía que más influyeron en la predicción del
-    modelo.
+def generate_grad_cam(array: np.ndarray) -> np.ndarray:
+    """Genera un mapa de calor Grad-CAM superpuesto sobre la imagen original.
 
     Args:
-        array: imagen original como array numpy (BGR).
+        array: Imagen original como array numpy en formato BGR.
 
     Returns:
-        Array numpy (RGB) con el heatmap superpuesto sobre la imagen original.
+        Array RGB ``(512, 512, 3)`` uint8 con el heatmap superpuesto.
     """
     img = preprocess(array)
-    model = model_fun()
+    model = load_model()
     grad_model = tf.keras.models.Model(
         inputs=model.inputs,
-        outputs=[model.get_layer("conv10_thisone").output, model.output],
+        outputs=[model.get_layer(CONV_LAYER_NAME).output, model.output],
     )
     with tf.GradientTape() as tape:
         inputs = tf.cast(img, tf.float32)
         outputs = grad_model(inputs)
         conv_outputs = outputs[0]
-        # Handle single tensor or list of tensors from multi-output models
         if len(outputs) == 2:
             raw_preds = tf.cast(outputs[1], tf.float32)
         else:
@@ -52,12 +55,11 @@ def grad_cam(array):
     heatmap = tf.squeeze(heatmap).numpy()
     heatmap = np.maximum(heatmap, 0)
     heatmap /= np.max(heatmap)
-    heatmap = cv2.resize(heatmap, (512, 512))
+    heatmap = cv2.resize(heatmap, IMG_SIZE)
     heatmap = np.uint8(255 * heatmap)
     heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-    img2 = cv2.resize(array, (512, 512))
-    hif = 0.8
-    transparency = heatmap * hif
+    img2 = cv2.resize(array, IMG_SIZE)
+    transparency = heatmap * HEATMAP_OPACITY
     transparency = transparency.astype(np.uint8)
     superimposed_img = cv2.add(transparency, img2)
     superimposed_img = superimposed_img.astype(np.uint8)
