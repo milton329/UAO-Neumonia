@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Preprocesamiento de la imagen de radiografía antes de pasarla al modelo."""
 
 import cv2

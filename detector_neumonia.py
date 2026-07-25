@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Interfaz gráfica (Tkinter) de la herramienta de detección de neumonía."""
 
 import csv
-from tkinter import END, StringVar, Text, Tk, font, ttk, filedialog
+from tkinter import END, StringVar, Text, Tk, filedialog, font, ttk
 from tkinter.messagebox import WARNING, askokcancel, showinfo
 
 import tkcap
@@ -129,7 +128,7 @@ class App:
         self.img2 = ImageTk.PhotoImage(self.img2)
         self.text_img2.image_create(END, image=self.img2)
         self.text2.insert(END, self.label)
-        self.text3.insert(END, "{:.2f}".format(self.proba) + "%")
+        self.text3.insert(END, f"{self.proba:.2f}" + "%")
 
     def _cedula_paciente(self):
         """Retorna la cédula ingresada por el usuario, o 'sin_cedula' si el
@@ -142,9 +141,7 @@ class App:
         historial en CSV."""
         with open("historial.csv", "a") as csvfile:
             w = csv.writer(csvfile, delimiter="-")
-            w.writerow(
-                [self.text1.get(), self.label, "{:.2f}".format(self.proba) + "%"]
-            )
+            w.writerow([self.text1.get(), self.label, f"{self.proba:.2f}" + "%"])
             showinfo(title="Guardar", message="Los datos se guardaron con éxito.")
 
     def create_pdf(self):

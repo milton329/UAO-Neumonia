@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Pruebas unitarias de grad_cam.grad_cam.
 
 Usan un modelo Keras diminuto (fixture tiny_cnn_model) en vez del modelo
@@ -63,7 +62,9 @@ def test_looks_up_the_named_conv_layer(tiny_cnn_model, sample_bgr_image):
     assert "conv10_thisone" in calls
 
 
-def test_is_deterministic_for_the_same_input_and_model(tiny_cnn_model, sample_bgr_image):
+def test_is_deterministic_for_the_same_input_and_model(
+    tiny_cnn_model, sample_bgr_image
+):
     with patch("grad_cam.model_fun", return_value=tiny_cnn_model):
         first = grad_cam(sample_bgr_image)
         second = grad_cam(sample_bgr_image)

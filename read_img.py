@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Lectura de imágenes de radiografía en formato DICOM y JPG/PNG."""
 
 import cv2

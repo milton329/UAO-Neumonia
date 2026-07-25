@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Integra lectura, preprocesamiento, predicción y Grad-CAM para la interfaz."""
 
 import numpy as np

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Pruebas unitarias de read_img.read_dicom_file y read_img.read_jpg_file."""
 
 from unittest.mock import MagicMock, patch
@@ -10,10 +9,10 @@ import pytest
 
 from read_img import read_dicom_file, read_jpg_file
 
-
 # ---------------------------------------------------------------------------
 # read_jpg_file
 # ---------------------------------------------------------------------------
+
 
 def _fake_bgr_image(value=100):
     return np.full((256, 256, 3), value, dtype=np.uint8)
@@ -72,6 +71,7 @@ def test_read_jpg_file_raises_when_file_could_not_be_read(mock_imread):
 # ---------------------------------------------------------------------------
 # read_dicom_file
 # ---------------------------------------------------------------------------
+
 
 def _fake_dicom_dataset():
     dataset = MagicMock()

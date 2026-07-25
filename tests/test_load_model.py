@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Pruebas unitarias de load_model.model_fun."""
 
 from unittest.mock import patch
@@ -30,4 +29,5 @@ def test_model_fun_returns_whatever_load_model_returns(mock_load_model):
 
 
 def test_model_path_points_to_conv_mlp_84():
-    assert load_model.MODEL_PATH == "conv_MLP_84.h5"
+    assert load_model.MODEL_PATH.name == "conv_MLP_84.h5"
+    assert load_model.MODEL_PATH.parent.name == "models"

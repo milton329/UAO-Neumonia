@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Pruebas unitarias de integrator.predict.
 
 model_fun, preprocess y grad_cam se mockean para aislar la lógica de
@@ -23,7 +22,9 @@ def _fake_model(predictions_row):
 @patch("integrator.grad_cam")
 @patch("integrator.model_fun")
 @patch("integrator.preprocess")
-def test_predict_returns_a_three_item_tuple(mock_preprocess, mock_model_fun, mock_grad_cam):
+def test_predict_returns_a_three_item_tuple(
+    mock_preprocess, mock_model_fun, mock_grad_cam
+):
     mock_preprocess.return_value = np.zeros((1, 512, 512, 1))
     mock_model_fun.return_value = _fake_model([0.9, 0.05, 0.05])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
@@ -37,7 +38,9 @@ def test_predict_returns_a_three_item_tuple(mock_preprocess, mock_model_fun, moc
 @patch("integrator.grad_cam")
 @patch("integrator.model_fun")
 @patch("integrator.preprocess")
-def test_predict_labels_class_0_as_bacteriana(mock_preprocess, mock_model_fun, mock_grad_cam):
+def test_predict_labels_class_0_as_bacteriana(
+    mock_preprocess, mock_model_fun, mock_grad_cam
+):
     mock_preprocess.return_value = np.zeros((1, 512, 512, 1))
     mock_model_fun.return_value = _fake_model([0.9, 0.05, 0.05])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
@@ -50,7 +53,9 @@ def test_predict_labels_class_0_as_bacteriana(mock_preprocess, mock_model_fun, m
 @patch("integrator.grad_cam")
 @patch("integrator.model_fun")
 @patch("integrator.preprocess")
-def test_predict_labels_class_1_as_normal(mock_preprocess, mock_model_fun, mock_grad_cam):
+def test_predict_labels_class_1_as_normal(
+    mock_preprocess, mock_model_fun, mock_grad_cam
+):
     mock_preprocess.return_value = np.zeros((1, 512, 512, 1))
     mock_model_fun.return_value = _fake_model([0.05, 0.9, 0.05])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
@@ -63,7 +68,9 @@ def test_predict_labels_class_1_as_normal(mock_preprocess, mock_model_fun, mock_
 @patch("integrator.grad_cam")
 @patch("integrator.model_fun")
 @patch("integrator.preprocess")
-def test_predict_labels_class_2_as_viral(mock_preprocess, mock_model_fun, mock_grad_cam):
+def test_predict_labels_class_2_as_viral(
+    mock_preprocess, mock_model_fun, mock_grad_cam
+):
     mock_preprocess.return_value = np.zeros((1, 512, 512, 1))
     mock_model_fun.return_value = _fake_model([0.05, 0.05, 0.9])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
@@ -76,7 +83,9 @@ def test_predict_labels_class_2_as_viral(mock_preprocess, mock_model_fun, mock_g
 @patch("integrator.grad_cam")
 @patch("integrator.model_fun")
 @patch("integrator.preprocess")
-def test_predict_probability_is_expressed_as_percentage(mock_preprocess, mock_model_fun, mock_grad_cam):
+def test_predict_probability_is_expressed_as_percentage(
+    mock_preprocess, mock_model_fun, mock_grad_cam
+):
     mock_preprocess.return_value = np.zeros((1, 512, 512, 1))
     mock_model_fun.return_value = _fake_model([0.8, 0.1, 0.1])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
@@ -89,7 +98,9 @@ def test_predict_probability_is_expressed_as_percentage(mock_preprocess, mock_mo
 @patch("integrator.grad_cam")
 @patch("integrator.model_fun")
 @patch("integrator.preprocess")
-def test_predict_passes_input_array_to_preprocess(mock_preprocess, mock_model_fun, mock_grad_cam):
+def test_predict_passes_input_array_to_preprocess(
+    mock_preprocess, mock_model_fun, mock_grad_cam
+):
     mock_preprocess.return_value = np.zeros((1, 512, 512, 1))
     mock_model_fun.return_value = _fake_model([0.9, 0.05, 0.05])
     mock_grad_cam.return_value = np.zeros((512, 512, 3))
@@ -121,7 +132,9 @@ def test_predict_passes_original_array_to_grad_cam_not_the_preprocessed_batch(
 @patch("integrator.grad_cam")
 @patch("integrator.model_fun")
 @patch("integrator.preprocess")
-def test_predict_returns_empty_label_for_unmapped_class(mock_preprocess, mock_model_fun, mock_grad_cam):
+def test_predict_returns_empty_label_for_unmapped_class(
+    mock_preprocess, mock_model_fun, mock_grad_cam
+):
     mock_preprocess.return_value = np.zeros((1, 512, 512, 1))
     # 4 clases -> argmax puede caer en el índice 3, que no está en LABELS
     mock_model_fun.return_value = _fake_model([0.1, 0.1, 0.1, 0.7])
