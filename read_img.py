@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Lectura de imágenes de radiografía en formato DICOM y JPG/PNG."""
+
+import cv2
+import numpy as np
+import pydicom as dicom
+from PIL import Image
+
+
+def read_dicom_file(path):
+    """Lee un archivo DICOM y lo retorna como array RGB listo para preprocesar
+    junto con una imagen PIL para mostrar en la interfaz.
+
+    Args:
+        path: ruta al archivo .dcm
+
+    Returns:
+        Tupla (img_RGB, img2show): array numpy en RGB e imagen PIL.
+    """
+    img = dicom.dcmread(path)
+    img_array = img.pixel_array
+    img2show = Image.fromarray(img_array)
+    img2 = img_array.astype(float)
+    img2 = (np.maximum(img2, 0) / img2.max()) * 255.0
+    img2 = np.uint8(img2)
+    img_RGB = cv2.cvtColor(img2, cv2.COLOR_GRAY2RGB)
+    return img_RGB, img2show
+
+
+def read_jpg_file(path):
+    """Lee un archivo JPG/PNG y lo retorna como array listo para preprocesar
+    junto con una imagen PIL para mostrar en la interfaz.
+
+    Args:
+        path: ruta al archivo de imagen.
+
+    Returns:
+        Tupla (img2, img2show): array numpy e imagen PIL.
+    """
+    img = cv2.imread(path)
+    img_array = np.asarray(img)
+    img2show = Image.fromarray(img_array)
+    img2 = img_array.astype(float)
+    img2 = (np.maximum(img2, 0) / img2.max()) * 255.0
+    img2 = np.uint8(img2)
+    return img2, img2show
