@@ -1,120 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""Interfaz gráfica (Tkinter) de la herramienta de detección de neumonía."""
 
-from tkinter import *
-from tkinter import ttk, font, filedialog, Entry
-
-from tkinter.messagebox import askokcancel, showinfo, WARNING
-import getpass
-from PIL import ImageTk, Image
 import csv
-import pyautogui
+from tkinter import END, StringVar, Text, Tk, font, ttk, filedialog
+from tkinter.messagebox import WARNING, askokcancel, showinfo
+
 import tkcap
-import img2pdf
-import numpy as np
-import time
-import tensorflow as tf
-import pydicom as dicom
-import cv2
+from PIL import Image, ImageTk
 
-
-def model_fun():
-    model = tf.keras.models.load_model("conv_MLP_84.h5", compile=False)
-    return model
-
-
-def grad_cam(array):
-    img = preprocess(array)
-    model = model_fun()
-    grad_model = tf.keras.models.Model(
-        inputs=model.inputs,
-        outputs=[model.get_layer("conv10_thisone").output, model.output]
-    )
-    with tf.GradientTape() as tape:
-        inputs = tf.cast(img, tf.float32)
-        outputs = grad_model(inputs)
-        conv_outputs = outputs[0]
-        # Handle single tensor or list of tensors from multi-output models
-        if len(outputs) == 2:
-            raw_preds = tf.cast(outputs[1], tf.float32)
-        else:
-            raw_preds = tf.stack([tf.reshape(tf.cast(outputs[i], tf.float32), [-1]) for i in range(1, len(outputs))], axis=0)
-            raw_preds = tf.expand_dims(raw_preds, 0)
-        predictions = tf.reshape(raw_preds, [1, -1])
-        argmax = int(np.argmax(predictions[0]))
-        loss = predictions[:, argmax]
-    grads = tape.gradient(loss, conv_outputs)
-    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
-    conv_outputs = conv_outputs[0]
-    heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
-    heatmap = tf.squeeze(heatmap).numpy()
-    heatmap = np.maximum(heatmap, 0)
-    heatmap /= np.max(heatmap)
-    heatmap = cv2.resize(heatmap, (512, 512))
-    heatmap = np.uint8(255 * heatmap)
-    heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-    img2 = cv2.resize(array, (512, 512))
-    hif = 0.8
-    transparency = heatmap * hif
-    transparency = transparency.astype(np.uint8)
-    superimposed_img = cv2.add(transparency, img2)
-    superimposed_img = superimposed_img.astype(np.uint8)
-    return superimposed_img[:, :, ::-1]
-
-
-def predict(array):
-    #   1. call function to pre-process image: it returns image in batch format
-    batch_array_img = preprocess(array)
-    #   2. call function to load model and predict: it returns predicted class and probability
-    model = model_fun()
-    # model_cnn = tf.keras.models.load_model('conv_MLP_84.h5')
-    prediction = np.argmax(model.predict(batch_array_img))
-    proba = np.max(model.predict(batch_array_img)) * 100
-    label = ""
-    if prediction == 0:
-        label = "bacteriana"
-    if prediction == 1:
-        label = "normal"
-    if prediction == 2:
-        label = "viral"
-    #   3. call function to generate Grad-CAM: it returns an image with a superimposed heatmap
-    heatmap = grad_cam(array)
-    return (label, proba, heatmap)
-
-
-def read_dicom_file(path):
-    img = dicom.dcmread(path)
-    img_array = img.pixel_array
-    img2show = Image.fromarray(img_array)
-    img2 = img_array.astype(float)
-    img2 = (np.maximum(img2, 0) / img2.max()) * 255.0
-    img2 = np.uint8(img2)
-    img_RGB = cv2.cvtColor(img2, cv2.COLOR_GRAY2RGB)
-    return img_RGB, img2show
-
-
-def read_jpg_file(path):
-    img = cv2.imread(path)
-    img_array = np.asarray(img)
-    img2show = Image.fromarray(img_array)
-    img2 = img_array.astype(float)
-    img2 = (np.maximum(img2, 0) / img2.max()) * 255.0
-    img2 = np.uint8(img2)
-    return img2, img2show
-
-
-def preprocess(array):
-    array = cv2.resize(array, (512, 512))
-    array = cv2.cvtColor(array, cv2.COLOR_BGR2GRAY)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4))
-    array = clahe.apply(array)
-    array = array / 255
-    array = np.expand_dims(array, axis=-1)
-    array = np.expand_dims(array, axis=0)
-    return array
+from integrator import predict
+from read_img import read_dicom_file, read_jpg_file
 
 
 class App:
+    """Ventana principal: carga una radiografía, ejecuta la predicción y
+    permite guardar/exportar el resultado."""
+
     def __init__(self):
         self.root = Tk()
         self.root.title("Herramienta para la detección rápida de neumonía")
@@ -191,14 +93,13 @@ class App:
         self.label = ""
         self.proba = 0
 
-        #   NUMERO DE IDENTIFICACIÓN PARA GENERAR PDF
-        self.reportID = 0
-
         #   RUN LOOP
         self.root.mainloop()
 
     #   METHODS
     def load_img_file(self):
+        """Abre el explorador de archivos, lee la imagen (DICOM o JPG/PNG)
+        seleccionada y la muestra en el panel izquierdo."""
         filepath = filedialog.askopenfilename(
             initialdir="/",
             title="Select image",
@@ -220,16 +121,25 @@ class App:
             self.button1["state"] = "normal"
 
     def run_model(self):
+        """Ejecuta la predicción sobre la imagen cargada y muestra el
+        resultado (clase, probabilidad y heatmap Grad-CAM) en la interfaz."""
         self.label, self.proba, self.heatmap = predict(self.array)
         self.img2 = Image.fromarray(self.heatmap)
         self.img2 = self.img2.resize((250, 250), Image.LANCZOS)
         self.img2 = ImageTk.PhotoImage(self.img2)
-        print("OK")
         self.text_img2.image_create(END, image=self.img2)
         self.text2.insert(END, self.label)
         self.text3.insert(END, "{:.2f}".format(self.proba) + "%")
 
+    def _cedula_paciente(self):
+        """Retorna la cédula ingresada por el usuario, o 'sin_cedula' si el
+        campo quedó vacío, para no dejar los reportes sin identificar."""
+        cedula = self.text1.get().strip()
+        return cedula if cedula else "sin_cedula"
+
     def save_results_csv(self):
+        """Agrega el resultado actual (cédula, clase, probabilidad) al
+        historial en CSV."""
         with open("historial.csv", "a") as csvfile:
             w = csv.writer(csvfile, delimiter="-")
             w.writerow(
@@ -238,17 +148,20 @@ class App:
             showinfo(title="Guardar", message="Los datos se guardaron con éxito.")
 
     def create_pdf(self):
+        """Genera un PDF con lo mostrado en pantalla, nombrado con la cédula
+        del paciente para no sobreescribir reportes de pacientes distintos."""
+        cedula = self._cedula_paciente()
         cap = tkcap.CAP(self.root)
-        ID = "Reporte" + str(self.reportID) + ".jpg"
+        ID = f"Reporte_{cedula}.jpg"
         img = cap.capture(ID)
         img = Image.open(ID)
         img = img.convert("RGB")
-        pdf_path = r"Reporte" + str(self.reportID) + ".pdf"
+        pdf_path = f"Reporte_{cedula}.pdf"
         img.save(pdf_path)
-        self.reportID += 1
         showinfo(title="PDF", message="El PDF fue generado con éxito.")
 
     def delete(self):
+        """Limpia los campos de la interfaz, previa confirmación del usuario."""
         answer = askokcancel(
             title="Confirmación", message="Se borrarán todos los datos.", icon=WARNING
         )
@@ -262,7 +175,7 @@ class App:
 
 
 def main():
-    my_app = App()
+    App()
     return 0
 
 
