@@ -1,36 +1,53 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-from tkinter import *
-from tkinter import ttk, font, filedialog, Entry
-
-from tkinter.messagebox import askokcancel, showinfo, WARNING
-import getpass
-from PIL import ImageTk, Image
 import csv
-import pyautogui
-import tkcap
-import img2pdf
-import numpy as np
-import time
-tf.compat.v1.disable_eager_execution()
-tf.compat.v1.experimental.output_all_intermediates(True)
+from functools import lru_cache
+from pathlib import Path
+from tkinter import *
+from tkinter import filedialog, font, ttk
+from tkinter.messagebox import WARNING, askokcancel, showinfo
+
 import cv2
+import numpy as np
+import pydicom as dicom
+import tensorflow as tf
+import tkcap
+from PIL import Image, ImageTk
+
+MODEL_PATH = Path(__file__).resolve().parent / "models" / "conv_MLP_84.h5"
+
+
+# Se cachea: el modelo pesa ~117MB y predict()/grad_cam() lo invocaban varias
+# veces por cada predicción, recargándolo cada vez.
+# compile=False: solo se usa para inferencia; el modelo se guardó con una
+# versión de Keras cuya configuración de compilación (loss/optimizer) ya no
+# es compatible con Keras 3, y no la necesitamos para predecir.
+@lru_cache(maxsize=1)
+def model_fun():
+    return tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 
 def grad_cam(array):
     img = preprocess(array)
     model = model_fun()
-    preds = model.predict(img)
-    argmax = np.argmax(preds[0])
-    output = model.output[:, argmax]
     last_conv_layer = model.get_layer("conv10_thisone")
-    grads = K.gradients(output, last_conv_layer.output)[0]
-    pooled_grads = K.mean(grads, axis=(0, 1, 2))
-    iterate = K.function([model.input], [pooled_grads, last_conv_layer.output[0]])
-    pooled_grads_value, conv_layer_output_value = iterate(img)
-    for filters in range(64):
-        conv_layer_output_value[:, :, filters] *= pooled_grads_value[filters]
+    # Modelo auxiliar que expone, además de la predicción, la salida de la
+    # última capa convolucional: es lo que necesita Grad-CAM para mapear
+    # qué zonas de la imagen influyeron más en la clase predicha.
+    grad_model = tf.keras.models.Model(
+        model.inputs, [last_conv_layer.output, *model.outputs]
+    )
+
+    with tf.GradientTape() as tape:
+        conv_layer_output, preds = grad_model(img)
+        argmax = tf.argmax(preds[0])
+        class_output = preds[:, argmax]
+
+    grads = tape.gradient(class_output, conv_layer_output)
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2)).numpy()
+    conv_layer_output_value = conv_layer_output[0].numpy()
+    for filters in range(conv_layer_output_value.shape[-1]):
+        conv_layer_output_value[:, :, filters] *= pooled_grads[filters]
     # creating the heatmap
     heatmap = np.mean(conv_layer_output_value, axis=-1)
     heatmap = np.maximum(heatmap, 0)  # ReLU
@@ -52,9 +69,9 @@ def predict(array):
     batch_array_img = preprocess(array)
     #   2. call function to load model and predict: it returns predicted class and probability
     model = model_fun()
-    # model_cnn = tf.keras.models.load_model('conv_MLP_84.h5')
-    prediction = np.argmax(model.predict(batch_array_img))
-    proba = np.max(model.predict(batch_array_img)) * 100
+    preds = model.predict(batch_array_img)
+    prediction = np.argmax(preds)
+    proba = np.max(preds) * 100
     label = ""
     if prediction == 0:
         label = "bacteriana"
@@ -68,7 +85,7 @@ def predict(array):
 
 
 def read_dicom_file(path):
-    img = dicom.read_file(path)
+    img = dicom.dcmread(path)
     img_array = img.pixel_array
     img2show = Image.fromarray(img_array)
     img2 = img_array.astype(float)
@@ -195,27 +212,25 @@ class App:
         )
         if filepath:
             self.array, img2show = read_dicom_file(filepath)
-            self.img1 = img2show.resize((250, 250), Image.ANTIALIAS)
+            self.img1 = img2show.resize((250, 250), Image.LANCZOS)
             self.img1 = ImageTk.PhotoImage(self.img1)
             self.text_img1.image_create(END, image=self.img1)
-            self.button1["state"] = "enabled"
+            self.button1["state"] = "normal"
 
     def run_model(self):
         self.label, self.proba, self.heatmap = predict(self.array)
         self.img2 = Image.fromarray(self.heatmap)
-        self.img2 = self.img2.resize((250, 250), Image.ANTIALIAS)
+        self.img2 = self.img2.resize((250, 250), Image.LANCZOS)
         self.img2 = ImageTk.PhotoImage(self.img2)
         print("OK")
         self.text_img2.image_create(END, image=self.img2)
         self.text2.insert(END, self.label)
-        self.text3.insert(END, "{:.2f}".format(self.proba) + "%")
+        self.text3.insert(END, f"{self.proba:.2f}" + "%")
 
     def save_results_csv(self):
         with open("historial.csv", "a") as csvfile:
             w = csv.writer(csvfile, delimiter="-")
-            w.writerow(
-                [self.text1.get(), self.label, "{:.2f}".format(self.proba) + "%"]
-            )
+            w.writerow([self.text1.get(), self.label, f"{self.proba:.2f}" + "%"])
             showinfo(title="Guardar", message="Los datos se guardaron con éxito.")
 
     def create_pdf(self):
@@ -243,7 +258,7 @@ class App:
 
 
 def main():
-    my_app = App()
+    App()
     return 0
 
 

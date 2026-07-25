@@ -1,0 +1,30 @@
+[project]
+name = "uao-neumonia"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "img2pdf>=0.6.3",
+    "opencv-python>=5.0.0.93",
+    "pandas>=3.0.3",
+    "pillow>=12.3.0",
+    "pyautogui>=0.9.54",
+    "pydicom>=3.0.2",
+    "python-xlib>=0.33 ; sys_platform == 'linux'",
+    "tensorflow>=2.21.0",
+    "tkcap>=0.0.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.0",
+]
+
+[tool.pytest.ini_options]
+# "." en pythonpath: detector_neumonia.py vive en la raíz del repo, no en un
+# paquete instalable, así que pytest necesita la raíz en sys.path para poder
+# importarlo desde tests/.
+pythonpath = ["."]
+testpaths = ["tests"]
