@@ -1,10 +1,21 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Fixtures compartidos entre las pruebas unitarias."""
 
 import numpy as np
 import pytest
 import tensorflow as tf
+
+import load_model
+
+
+@pytest.fixture(autouse=True)
+def _clear_model_cache():
+    """model_fun() usa lru_cache; sin limpiarlo entre tests, una vez que un
+    test dispara la carga real (o un mock) del modelo, los siguientes lo
+    reciben cacheado en vez de invocar su propio mock."""
+    load_model.model_fun.cache_clear()
+    yield
+    load_model.model_fun.cache_clear()
 
 
 @pytest.fixture
