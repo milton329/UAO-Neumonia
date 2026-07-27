@@ -166,7 +166,20 @@ La suite (42 pruebas) cubre `read_img`, `preprocess_img`, `load_model`, `grad_ca
 ```bash
 uv run pytest --cov
 ```
+Se escribieron 39 pruebas adicionales (algunas usando pytest.mark.parametrize para cubrir múltiples casos con una sola función), distribuidas así:
 
+### Funcionalidades probadas en `detector_neumonia.py`
+
+| Funcionalidad probada | Casos cubiertos |
+|:---|:---|
+| `_cedula_paciente()` | Campo vacío, con espacios, con tabulaciones, cédula válida, cédula con espacios en los bordes, cédula con espacios internos |
+| `load_img_file()` | Extensión `.dcm`, `.jpg`, `.jpeg`, `.png`, sensibilidad a mayúsculas (`.DCM`), cancelación del diálogo de selección, redimensionamiento de la imagen mostrada |
+| `run_model()` | Formato correcto del porcentaje, redondeo de decimales, valores extremos (0% y 100%), llamada correcta a `predict()`, construcción del heatmap |
+| `save_results_csv()` | Escritura correcta de la fila en el CSV, mensaje de confirmación al usuario, acumulación de múltiples registros sin sobrescribir |
+| `delete()` | Limpieza de todos los campos al confirmar, ningún cambio al cancelar, solicitud de confirmación previa, mensaje de éxito condicionado a la confirmación |
+| `create_pdf()` | Nombrado del archivo según la cédula del paciente, caso sin cédula, conversión de la imagen a RGB, captura de la ventana, mensaje de éxito |
+
+Resultado final: 81 pruebas unitarias en todo el proyecto, todas pasando (uv run pytest -v), documentación de la sección de pruebas en este README, y gestión completa del flujo de Git (rama test/pruebas-unitarias, sincronización con develop, y apertura del Pull Request para revisión del equipo).
 ## Makefile
 
 Todos los comandos corren dentro del entorno de `uv`, sin necesidad de activarlo manualmente:
