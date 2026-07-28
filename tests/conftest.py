@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-import load_model
+from app import load_model
 
 
 @pytest.fixture(autouse=True)
