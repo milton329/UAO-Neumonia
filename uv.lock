@@ -1173,6 +1173,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6e/ad/1c695117e831f7b6803b9d18ff5ed21d42295866a0d96e7e2bf9389d6457/tkcap-0.0.4.tar.gz", hash = "sha256:165e04828c143536077dfc120d44e10ed2d1f100b5b971b3469cb8eab4f570db", size = 4634, upload-time = "2024-09-13T12:41:58.795Z" }
 
 [[package]]
+name = "ttkbootstrap"
+version = "2.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pillow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c0/3a/7973b249f1bd1b24557b68adda038ff45966fccc55818d4c18fb26d290eb/ttkbootstrap-2.0.1.tar.gz", hash = "sha256:23d273aefe57164a7e4007c9d9beae970ccf15b8bf157fab5a7e1bda747829dd", size = 528289, upload-time = "2026-07-23T15:30:35.078Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/8a/c0dd3ddd4884ba52c63237b9082463d20e8e5c3a2ee348d0bedbb46f702f/ttkbootstrap-2.0.1-py3-none-any.whl", hash = "sha256:127e5c0c019a03e1862e6b9ce04cc6b15540e00c1c39865b7bf89122d5586194", size = 511171, upload-time = "2026-07-23T15:30:33.823Z" },
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1204,6 +1216,7 @@ dependencies = [
     { name = "python-xlib", marker = "sys_platform == 'linux'" },
     { name = "tensorflow" },
     { name = "tkcap" },
+    { name = "ttkbootstrap" },
 ]
 
 [package.dev-dependencies]
@@ -1224,6 +1237,7 @@ requires-dist = [
     { name = "python-xlib", marker = "sys_platform == 'linux'", specifier = ">=0.33" },
     { name = "tensorflow", specifier = ">=2.21.0" },
     { name = "tkcap", specifier = ">=0.0.4" },
+    { name = "ttkbootstrap", specifier = ">=2.0.1" },
 ]
 
 [package.metadata.requires-dev]

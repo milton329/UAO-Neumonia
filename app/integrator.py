@@ -3,9 +3,9 @@
 
 import numpy as np
 
-from grad_cam import grad_cam
-from load_model import model_fun
-from preprocess_img import preprocess
+from app.grad_cam import grad_cam
+from app.load_model import model_fun
+from app.preprocess_img import preprocess
 
 LABELS = {0: "bacteriana", 1: "normal", 2: "viral"}
 

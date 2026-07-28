@@ -83,11 +83,10 @@ models/*
 
 # -----------------------------------------------------------------------------
 # Artefactos generados en tiempo de ejecución por la aplicación
-# (historial de predicciones y reportes en PDF/JPG creados desde la GUI)
+# (historial de predicciones y reportes en PDF/JPG creados desde la GUI,
+# organizados en la carpeta reportes/)
 # -----------------------------------------------------------------------------
-historial.csv
-Reporte*.jpg
-Reporte*.pdf
+reportes/
 
 # -----------------------------------------------------------------------------
 # Editores / IDEs

@@ -14,6 +14,7 @@ dependencies = [
     "python-xlib>=0.33 ; sys_platform == 'linux'",
     "tensorflow>=2.21.0",
     "tkcap>=0.0.4",
+    "ttkbootstrap>=2.0.1",
 ]
 
 [dependency-groups]
@@ -24,8 +25,8 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-# "." en pythonpath: los módulos (detector_neumonia.py, integrator.py, etc.)
-# viven en la raíz del repo, no en un paquete instalable, así que pytest
-# necesita la raíz en sys.path para poder importarlos desde tests/.
+# "." en pythonpath: el paquete "app" (con los módulos detector_neumonia.py,
+# integrator.py, etc.) vive en la raíz del repo, no está instalado, así que
+# pytest necesita la raíz en sys.path para poder importar "app.X" desde tests/.
 pythonpath = ["."]
 testpaths = ["tests"]

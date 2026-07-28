@@ -6,7 +6,7 @@ from pathlib import Path
 
 import tensorflow as tf
 
-MODEL_PATH = Path(__file__).resolve().parent / "models" / "conv_MLP_84.h5"
+MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "conv_MLP_84.h5"
 
 
 # Se cachea: el modelo pesa ~117MB e integrator.predict()/grad_cam.grad_cam()
