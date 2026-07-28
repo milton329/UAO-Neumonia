@@ -22,6 +22,7 @@ Herramienta de escritorio para el apoyo al diagnóstico rápido de neumonía a p
 - [Instalación](#instalación)
 - [Ejecución](#ejecución)
 - [Uso de la interfaz gráfica](#uso-de-la-interfaz-gráfica)
+- [Exportación a PDF](#exportación-a-pdf)
 - [Pruebas unitarias](#pruebas-unitarias)
 - [Makefile](#makefile)
 - [Docker](#docker)
@@ -46,26 +47,32 @@ El proyecto es modular: la interfaz gráfica no contiene lógica de inferencia, 
 
 ```mermaid
 flowchart TD
-    main[main.py] --> gui["detector_neumonia.py<br/>Interfaz Tkinter"]
-    gui -->|Cargar Imagen| read[read_img.py]
-    gui -->|Predecir| integ[integrator.py]
-    integ --> prep[preprocess_img.py]
-    integ --> model[load_model.py]
-    integ --> gc[grad_cam.py]
+    main[main.py] --> gui["presentation/app.py<br/>Interfaz Tkinter"]
+    gui -->|Cargar Imagen| read[infrastructure/image_reader.py]
+    gui -->|Predecir| svc[application/prediction_service.py]
+    svc --> prep[infrastructure/image_processor.py]
+    svc --> model[infrastructure/model_loader.py]
+    svc --> gc[infrastructure/grad_cam_generator.py]
     gc --> prep
     gc --> model
     model -.lee.-> h5[("models/conv_MLP_84.h5")]
+    gui -->|Guardar| csv[infrastructure/csv_history.py]
+    gui -->|PDF| pdf[infrastructure/pdf_exporter.py]
 ```
 
 | Módulo | Responsabilidad |
-|---|---|
+|---|---|---|
 | `main.py` | Punto de entrada de la aplicación. |
-| `detector_neumonia.py` | Interfaz gráfica (Tkinter): carga de imágenes, botones, historial y exportación a PDF. No contiene lógica de inferencia. |
-| `read_img.py` | Lee un archivo DICOM o JPG/PNG y lo convierte a un array numpy listo para preprocesar. |
-| `preprocess_img.py` | Preprocesa el array: resize a 512×512, escala de grises, ecualización CLAHE, normalización 0–1, formato de batch. |
-| `load_model.py` | Carga (una sola vez, con caché) el modelo entrenado desde `models/conv_MLP_84.h5`. |
-| `grad_cam.py` | Genera el mapa de calor Grad-CAM sobre la imagen, usando `tf.GradientTape`. |
-| `integrator.py` | Orquesta preprocesamiento → predicción → Grad-CAM y devuelve `(label, proba, heatmap)` a la interfaz. |
+| `presentation/app.py` | Interfaz gráfica (Tkinter): carga de imágenes, botones, historial y exportación a PDF. No contiene lógica de inferencia. |
+| `infrastructure/image_reader.py` | Lee un archivo DICOM o JPG/PNG y lo convierte a un array numpy listo para preprocesar. |
+| `infrastructure/image_processor.py` | Preprocesa el array: resize a 512×512, escala de grises, ecualización CLAHE, normalización 0–1, formato de batch. |
+| `infrastructure/model_loader.py` | Carga (una sola vez, con caché) el modelo entrenado desde `models/conv_MLP_84.h5`. |
+| `infrastructure/grad_cam_generator.py` | Genera el mapa de calor Grad-CAM sobre la imagen, usando `tf.GradientTape`. |
+| `application/prediction_service.py` | Orquesta preprocesamiento → predicción → Grad-CAM y retorna `PredictionResult` a la interfaz. |
+| `infrastructure/csv_history.py` | Persiste los resultados en el archivo `historial.csv`. |
+| `infrastructure/pdf_exporter.py` | Genera un reporte PDF con imagen, heatmap y diagnóstico (sin tkcap). |
+| `config.py` | Constantes centralizadas del proyecto. |
+| `domain/models.py` | Modelos de dominio (`PredictionResult`). |
 
 ### Árbol de archivos
 
@@ -75,19 +82,39 @@ UAO-Neumonia/
 │   └── pull_request_template.md
 ├── models/
 │   └── conv_MLP_84.h5        # no versionado en git (~117MB), ver Instalación
+├── src/
+│   └── uao_neumonia/
+│       ├── __init__.py
+│       ├── config.py                   # constantes centralizadas
+│       ├── domain/
+│       │   ├── __init__.py
+│       │   └── models.py               # PredictionResult (dataclass)
+│       ├── infrastructure/
+│       │   ├── __init__.py
+│       │   ├── model_loader.py         # carga del modelo
+│       │   ├── image_reader.py         # lectura DICOM / JPG / PNG
+│       │   ├── image_processor.py      # preprocesamiento
+│       │   ├── grad_cam_generator.py   # Grad-CAM heatmap
+│       │   ├── csv_history.py          # historial CSV
+│       │   └── pdf_exporter.py         # exportación a PDF
+│       ├── application/
+│       │   ├── __init__.py
+│       │   └── prediction_service.py   # orquestación
+│       └── presentation/
+│           ├── __init__.py
+│           └── app.py                  # interfaz gráfica (Tkinter)
 ├── tests/
 │   ├── conftest.py
-│   ├── test_grad_cam.py
-│   ├── test_integrator.py
-│   ├── test_load_model.py
-│   ├── test_preprocess_img.py
-│   └── test_read_img.py
-├── detector_neumonia.py      # interfaz gráfica (Tkinter)
-├── integrator.py             # orquesta el flujo de predicción
-├── read_img.py               # lectura de DICOM / JPG / PNG
-├── preprocess_img.py         # preprocesamiento de la imagen
-├── load_model.py             # carga del modelo entrenado
-├── grad_cam.py                # generación del heatmap Grad-CAM
+│   ├── test_app.py
+│   ├── test_config.py
+│   ├── test_csv_history.py
+│   ├── test_domain_models.py
+│   ├── test_grad_cam_generator.py
+│   ├── test_image_processor.py
+│   ├── test_image_reader.py
+│   ├── test_model_loader.py
+│   ├── test_pdf_exporter.py
+│   └── test_prediction_service.py
 ├── main.py                   # punto de entrada
 ├── Dockerfile
 ├── .dockerignore
@@ -154,6 +181,23 @@ Ver [Makefile](#makefile) para el resto de comandos disponibles, o [Docker](#doc
 5. Presiona **PDF** para exportar un reporte (`Reporte_<cédula>.pdf`).
 6. Presiona **Borrar** para limpiar la interfaz y cargar una nueva imagen.
 
+## Exportación a PDF
+
+El botón **PDF** de la interfaz genera un reporte con la imagen original, el heatmap Grad-CAM, el diagnóstico y la probabilidad. Inicialmente se implementó con la librería **`tkcap`**, que capturaba la pantalla de la ventana y guardaba la imagen como PDF. Ese enfoque presentaba dos problemas:
+
+1. **No funcionaba en macOS** — `tkcap` depende de `python-xlib` (X11), pero Tkinter en macOS usa Aqua Tk, no X11.
+2. **Captura frágil** — tomaba un screenshot de la región de la pantalla, no de la ventana en sí, por lo que cualquier elemento superpuesto (notificaciones, otras ventanas) podía contaminar el reporte.
+
+### Solución implementada
+
+Se reemplazó `tkcap` por una composición programática con **Pillow** (que ya estaba en las dependencias del proyecto). El nuevo módulo `infrastructure/pdf_exporter.py`:
+
+1. Toma los datos directamente de la memoria (arrays numpy de la imagen original y el heatmap), sin capturar pantalla.
+2. Compone un collage de 1000×500 px con Pillow: imagen original a la izquierda, heatmap a la derecha, diagnóstico y probabilidad en la parte inferior.
+3. Guarda el collage como PDF con `img.save(pdf_path, "PDF")`.
+
+Esto eliminó la dependencia de `tkcap` y `python-xlib`, y la generación de PDF funciona correctamente en **macOS, Linux y Windows** sin ninguna dependencia adicional del sistema.
+
 ## Pruebas unitarias
 
 ```bash
@@ -161,7 +205,7 @@ make test
 # equivalente a: uv run pytest
 ```
 
-La suite (42 pruebas) cubre `read_img`, `preprocess_img`, `load_model`, `grad_cam` e `integrator`. La mayoría usa mocks o un modelo Keras diminuto (fixture `tiny_cnn_model`), por lo que corren en segundos y **no dependen de tener el modelo real de 117MB descargado**. Para medir cobertura:
+La suite (**105 pruebas**) cubre todos los módulos del paquete `uao_neumonia`: configuración, modelos de dominio, carga del modelo, lectura de imágenes, preprocesamiento, Grad-CAM, servicio de predicción, historial CSV, exportación PDF e interfaz gráfica. La mayoría usa mocks o un modelo Keras diminuto (fixture `tiny_cnn_model`), por lo que corren en segundos y **no dependen de tener el modelo real de 117MB descargado**. Para medir cobertura:
 
 ```bash
 uv run pytest --cov

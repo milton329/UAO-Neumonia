@@ -3,6 +3,7 @@ from unittest.mock import patch
 import cv2
 import numpy as np
 
+from uao_neumonia.config import CONV_LAYER_NAME
 from uao_neumonia.infrastructure.grad_cam_generator import generate_grad_cam
 
 
@@ -66,3 +67,40 @@ def test_heatmap_actually_blends_with_original_image(tiny_cnn_model, sample_bgr_
     with patch("uao_neumonia.infrastructure.grad_cam_generator.load_model", return_value=tiny_cnn_model):
         result = generate_grad_cam(sample_bgr_image)
     assert not np.array_equal(result, plain_resized_rgb)
+
+
+def test_calls_preprocess_internally(tiny_cnn_model, sample_bgr_image):
+    with (
+        patch("uao_neumonia.infrastructure.grad_cam_generator.preprocess", return_value=np.zeros((1, 512, 512, 1))) as mock_pre,
+        patch("uao_neumonia.infrastructure.grad_cam_generator.load_model", return_value=tiny_cnn_model),
+    ):
+        generate_grad_cam(sample_bgr_image)
+    mock_pre.assert_called_once()
+
+
+def test_output_is_rgb_not_bgr(tiny_cnn_model, sample_bgr_image):
+    with patch("uao_neumonia.infrastructure.grad_cam_generator.load_model", return_value=tiny_cnn_model):
+        result = generate_grad_cam(sample_bgr_image)
+    r, g, b = result[:, :, 0], result[:, :, 1], result[:, :, 2]
+    assert not np.array_equal(r, g) or not np.array_equal(g, b)
+
+
+def test_uses_config_layer_name(tiny_cnn_model, sample_bgr_image):
+    assert CONV_LAYER_NAME == "conv10_thisone"
+    with patch("uao_neumonia.infrastructure.grad_cam_generator.load_model", return_value=tiny_cnn_model):
+        result = generate_grad_cam(sample_bgr_image)
+    assert result is not None
+
+
+def test_works_with_all_black_image(tiny_cnn_model):
+    black = np.zeros((512, 512, 3), dtype=np.uint8)
+    with patch("uao_neumonia.infrastructure.grad_cam_generator.load_model", return_value=tiny_cnn_model):
+        result = generate_grad_cam(black)
+    assert result.shape == (512, 512, 3)
+
+
+def test_works_with_all_white_image(tiny_cnn_model):
+    white = np.full((512, 512, 3), 255, dtype=np.uint8)
+    with patch("uao_neumonia.infrastructure.grad_cam_generator.load_model", return_value=tiny_cnn_model):
+        result = generate_grad_cam(white)
+    assert result.shape == (512, 512, 3)

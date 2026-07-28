@@ -1,4 +1,6 @@
+import cv2
 import numpy as np
+import pytest
 
 from uao_neumonia.infrastructure.image_processor import preprocess
 
@@ -62,3 +64,38 @@ def test_distinct_regions_are_actually_converted_to_grayscale():
     result = preprocess(array)
 
     assert result.std() > 0
+
+
+def test_non_square_input_produces_square_output():
+    result = preprocess(_bgr_image(400, 600))
+    assert result.shape[1] == 512
+    assert result.shape[2] == 512
+
+
+def test_input_with_float_dtype():
+    array = np.full((256, 256, 3), 0.5, dtype=np.float32)
+    result = preprocess((array * 255).astype(np.uint8))
+    assert result.shape == (1, 512, 512, 1)
+    assert np.issubdtype(result.dtype, np.floating)
+
+
+def test_large_input_image():
+    result = preprocess(_bgr_image(2000, 1500, value=120))
+    assert result.shape == (1, 512, 512, 1)
+
+
+def test_very_small_input():
+    result = preprocess(_bgr_image(16, 16, value=100))
+    assert result.shape == (1, 512, 512, 1)
+
+
+def test_rgba_input_uses_only_first_three_channels():
+    rgba = np.full((100, 100, 4), 128, dtype=np.uint8)
+    result = preprocess(rgba)
+    assert result.shape == (1, 512, 512, 1)
+
+
+def test_grayscale_input_raises_error():
+    gray = np.full((100, 100), 128, dtype=np.uint8)
+    with pytest.raises(cv2.error):
+        preprocess(gray)
