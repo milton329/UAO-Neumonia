@@ -7,6 +7,7 @@ instancia saltándonos __init__ (App.__new__(App)) y asignamos los
 atributos que cada método necesita como Mock().
 """
 
+import os
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -143,6 +144,8 @@ def test_run_model_updates_label_and_probability(
     mock_predict.return_value = (label, proba, MagicMock())
     mock_fromarray.return_value.resize.return_value = MagicMock()
     app.array = MagicMock()
+    app.text1 = Mock()
+    app.text1.get.return_value = "123456789"
     app.text_img2 = Mock()
     app.text2 = Mock()
     app.text3 = Mock()
@@ -159,6 +162,8 @@ def test_run_model_updates_label_and_probability(
 def test_run_model_passes_loaded_array_to_predict(mock_predict, mock_fromarray, mock_photo, app):
     mock_predict.return_value = ("Normal", 50.0, MagicMock())
     app.array = MagicMock()
+    app.text1 = Mock()
+    app.text1.get.return_value = "123456789"
     app.text_img2 = Mock()
     app.text2 = Mock()
     app.text3 = Mock()
@@ -175,6 +180,8 @@ def test_run_model_builds_heatmap_image_from_prediction(mock_predict, mock_froma
     fake_heatmap = MagicMock()
     mock_predict.return_value = ("Normal", 50.0, fake_heatmap)
     app.array = MagicMock()
+    app.text1 = Mock()
+    app.text1.get.return_value = "123456789"
     app.text_img2 = Mock()
     app.text2 = Mock()
     app.text3 = Mock()
@@ -182,6 +189,41 @@ def test_run_model_builds_heatmap_image_from_prediction(mock_predict, mock_froma
     app.run_model()
 
     mock_fromarray.assert_called_once_with(fake_heatmap)
+
+
+@patch("detector_neumonia.showwarning")
+@patch("detector_neumonia.predict")
+def test_run_model_blocks_prediction_when_cedula_is_empty(mock_predict, mock_showwarning, app):
+    app.array = MagicMock()
+    app.text1 = Mock()
+    app.text1.get.return_value = "   "
+
+    app.run_model()
+
+    mock_predict.assert_not_called()
+    mock_showwarning.assert_called_once()
+    app.text1.focus_set.assert_called_once()
+
+
+@patch("detector_neumonia.ImageTk.PhotoImage")
+@patch("detector_neumonia.Image.fromarray")
+@patch("detector_neumonia.showwarning")
+@patch("detector_neumonia.predict")
+def test_run_model_predicts_when_cedula_is_present(
+    mock_predict, mock_showwarning, mock_fromarray, mock_photo, app
+):
+    mock_predict.return_value = ("Normal", 50.0, MagicMock())
+    app.array = MagicMock()
+    app.text1 = Mock()
+    app.text1.get.return_value = "123456789"
+    app.text_img2 = Mock()
+    app.text2 = Mock()
+    app.text3 = Mock()
+
+    app.run_model()
+
+    mock_predict.assert_called_once_with(app.array)
+    mock_showwarning.assert_not_called()
 
 
 # ---------------------------------------------------------------------
@@ -209,7 +251,7 @@ def test_save_results_csv_writes_expected_row(
 
     app.save_results_csv()
 
-    contenido = (tmp_path / "historial.csv").read_text()
+    contenido = (tmp_path / "reportes" / "historial.csv").read_text()
     assert expected_row in contenido
 
 
@@ -240,7 +282,7 @@ def test_save_results_csv_appends_multiple_entries(mock_showinfo, app, tmp_path,
     app.proba = 20.0
     app.save_results_csv()
 
-    contenido = (tmp_path / "historial.csv").read_text()
+    contenido = (tmp_path / "reportes" / "historial.csv").read_text()
     assert "111-Normal-10.00%" in contenido
     assert "222-Viral-20.00%" in contenido
 
@@ -344,30 +386,39 @@ def test_delete_asks_confirmation_before_clearing(mock_confirm, app):
 @patch("detector_neumonia.Image.open")
 @patch("detector_neumonia.tkcap.CAP")
 def test_create_pdf_names_file_with_patient_id(
-    mock_cap_cls, mock_open, mock_showinfo, app, cedula_input, expected_filename_id
+    mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch,
+    cedula_input, expected_filename_id,
 ):
+    monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
     app.text1.get.return_value = cedula_input
     app.root = Mock()
     mock_cap_instance = mock_cap_cls.return_value
-    mock_cap_instance.capture.return_value = f"Reporte_{expected_filename_id}.jpg"
+    expected_jpg = os.path.join("reportes", f"Reporte_{expected_filename_id}.jpg")
+    expected_pdf = os.path.join("reportes", f"Reporte_{expected_filename_id}.pdf")
+    mock_cap_instance.capture.return_value = expected_jpg
     mock_img = mock_open.return_value
     mock_img.convert.return_value = mock_img
 
     app.create_pdf()
 
-    mock_cap_instance.capture.assert_called_once_with(f"Reporte_{expected_filename_id}.jpg")
-    mock_img.save.assert_called_once_with(f"Reporte_{expected_filename_id}.pdf")
+    mock_cap_instance.capture.assert_called_once_with(expected_jpg)
+    mock_img.save.assert_called_once_with(expected_pdf)
 
 
 @patch("detector_neumonia.showinfo")
 @patch("detector_neumonia.Image.open")
 @patch("detector_neumonia.tkcap.CAP")
-def test_create_pdf_converts_image_to_rgb(mock_cap_cls, mock_open, mock_showinfo, app):
+def test_create_pdf_converts_image_to_rgb(
+    mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
     app.text1.get.return_value = "123456789"
     app.root = Mock()
-    mock_cap_cls.return_value.capture.return_value = "Reporte_123456789.jpg"
+    mock_cap_cls.return_value.capture.return_value = os.path.join(
+        "reportes", "Reporte_123456789.jpg"
+    )
     mock_img = mock_open.return_value
 
     app.create_pdf()
@@ -378,11 +429,16 @@ def test_create_pdf_converts_image_to_rgb(mock_cap_cls, mock_open, mock_showinfo
 @patch("detector_neumonia.showinfo")
 @patch("detector_neumonia.Image.open")
 @patch("detector_neumonia.tkcap.CAP")
-def test_create_pdf_shows_success_message(mock_cap_cls, mock_open, mock_showinfo, app):
+def test_create_pdf_shows_success_message(
+    mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
     app.text1.get.return_value = "123456789"
     app.root = Mock()
-    mock_cap_cls.return_value.capture.return_value = "Reporte_123456789.jpg"
+    mock_cap_cls.return_value.capture.return_value = os.path.join(
+        "reportes", "Reporte_123456789.jpg"
+    )
     mock_img = mock_open.return_value
     mock_img.convert.return_value = mock_img
 
@@ -394,11 +450,16 @@ def test_create_pdf_shows_success_message(mock_cap_cls, mock_open, mock_showinfo
 @patch("detector_neumonia.showinfo")
 @patch("detector_neumonia.Image.open")
 @patch("detector_neumonia.tkcap.CAP")
-def test_create_pdf_captures_the_app_window(mock_cap_cls, mock_open, mock_showinfo, app):
+def test_create_pdf_captures_the_app_window(
+    mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
     app.text1.get.return_value = "123456789"
     app.root = Mock()
-    mock_cap_cls.return_value.capture.return_value = "Reporte_123456789.jpg"
+    mock_cap_cls.return_value.capture.return_value = os.path.join(
+        "reportes", "Reporte_123456789.jpg"
+    )
     mock_img = mock_open.return_value
     mock_img.convert.return_value = mock_img
 

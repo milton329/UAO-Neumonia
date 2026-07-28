@@ -2,14 +2,17 @@
 """Interfaz gráfica (Tkinter) de la herramienta de detección de neumonía."""
 
 import csv
+import os
 from tkinter import END, StringVar, Text, Tk, filedialog, font, ttk
-from tkinter.messagebox import WARNING, askokcancel, showinfo
+from tkinter.messagebox import WARNING, askokcancel, showinfo, showwarning
 
 import tkcap
 from PIL import Image, ImageTk
 
 from integrator import predict
 from read_img import read_dicom_file, read_jpg_file
+
+REPORTS_DIR = "reportes"
 
 
 class App:
@@ -121,7 +124,18 @@ class App:
 
     def run_model(self):
         """Ejecuta la predicción sobre la imagen cargada y muestra el
-        resultado (clase, probabilidad y heatmap Grad-CAM) en la interfaz."""
+        resultado (clase, probabilidad y heatmap Grad-CAM) en la interfaz.
+
+        Exige que la cédula del paciente esté diligenciada antes de predecir,
+        para que los reportes generados después siempre queden identificados.
+        """
+        if not self.text1.get().strip():
+            showwarning(
+                title="Cédula requerida",
+                message="Ingrese la cédula del paciente antes de predecir.",
+            )
+            self.text1.focus_set()
+            return
         self.label, self.proba, self.heatmap = predict(self.array)
         self.img2 = Image.fromarray(self.heatmap)
         self.img2 = self.img2.resize((250, 250), Image.LANCZOS)
@@ -138,22 +152,26 @@ class App:
 
     def save_results_csv(self):
         """Agrega el resultado actual (cédula, clase, probabilidad) al
-        historial en CSV."""
-        with open("historial.csv", "a") as csvfile:
+        historial en CSV, dentro de la carpeta reportes/."""
+        os.makedirs(REPORTS_DIR, exist_ok=True)
+        historial_path = os.path.join(REPORTS_DIR, "historial.csv")
+        with open(historial_path, "a") as csvfile:
             w = csv.writer(csvfile, delimiter="-")
             w.writerow([self.text1.get(), self.label, f"{self.proba:.2f}" + "%"])
             showinfo(title="Guardar", message="Los datos se guardaron con éxito.")
 
     def create_pdf(self):
-        """Genera un PDF con lo mostrado en pantalla, nombrado con la cédula
-        del paciente para no sobreescribir reportes de pacientes distintos."""
+        """Genera un PDF con lo mostrado en pantalla, dentro de la carpeta
+        reportes/, nombrado con la cédula del paciente para no sobreescribir
+        reportes de pacientes distintos."""
         cedula = self._cedula_paciente()
+        os.makedirs(REPORTS_DIR, exist_ok=True)
         cap = tkcap.CAP(self.root)
-        ID = f"Reporte_{cedula}.jpg"
+        ID = os.path.join(REPORTS_DIR, f"Reporte_{cedula}.jpg")
         img = cap.capture(ID)
         img = Image.open(ID)
         img = img.convert("RGB")
-        pdf_path = f"Reporte_{cedula}.pdf"
+        pdf_path = os.path.join(REPORTS_DIR, f"Reporte_{cedula}.pdf")
         img.save(pdf_path)
         showinfo(title="PDF", message="El PDF fue generado con éxito.")
 
