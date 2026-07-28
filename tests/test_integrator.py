@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from integrator import predict
+from app.integrator import predict
 
 
 def _fake_model(predictions_row):
@@ -19,9 +19,9 @@ def _fake_model(predictions_row):
     return model
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("app.integrator.grad_cam")
+@patch("app.integrator.model_fun")
+@patch("app.integrator.preprocess")
 def test_predict_returns_a_three_item_tuple(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -35,9 +35,9 @@ def test_predict_returns_a_three_item_tuple(
     assert len(result) == 3
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("app.integrator.grad_cam")
+@patch("app.integrator.model_fun")
+@patch("app.integrator.preprocess")
 def test_predict_labels_class_0_as_bacteriana(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -50,9 +50,9 @@ def test_predict_labels_class_0_as_bacteriana(
     assert label == "bacteriana"
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("app.integrator.grad_cam")
+@patch("app.integrator.model_fun")
+@patch("app.integrator.preprocess")
 def test_predict_labels_class_1_as_normal(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -65,9 +65,9 @@ def test_predict_labels_class_1_as_normal(
     assert label == "normal"
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("app.integrator.grad_cam")
+@patch("app.integrator.model_fun")
+@patch("app.integrator.preprocess")
 def test_predict_labels_class_2_as_viral(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -80,9 +80,9 @@ def test_predict_labels_class_2_as_viral(
     assert label == "viral"
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("app.integrator.grad_cam")
+@patch("app.integrator.model_fun")
+@patch("app.integrator.preprocess")
 def test_predict_probability_is_expressed_as_percentage(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -95,9 +95,9 @@ def test_predict_probability_is_expressed_as_percentage(
     assert proba == pytest.approx(80.0)
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("app.integrator.grad_cam")
+@patch("app.integrator.model_fun")
+@patch("app.integrator.preprocess")
 def test_predict_passes_input_array_to_preprocess(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -112,9 +112,9 @@ def test_predict_passes_input_array_to_preprocess(
     assert np.array_equal(called_array, original_array)
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("app.integrator.grad_cam")
+@patch("app.integrator.model_fun")
+@patch("app.integrator.preprocess")
 def test_predict_passes_original_array_to_grad_cam_not_the_preprocessed_batch(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):
@@ -129,9 +129,9 @@ def test_predict_passes_original_array_to_grad_cam_not_the_preprocessed_batch(
     assert np.array_equal(called_array, original_array)
 
 
-@patch("integrator.grad_cam")
-@patch("integrator.model_fun")
-@patch("integrator.preprocess")
+@patch("app.integrator.grad_cam")
+@patch("app.integrator.model_fun")
+@patch("app.integrator.preprocess")
 def test_predict_returns_empty_label_for_unmapped_class(
     mock_preprocess, mock_model_fun, mock_grad_cam
 ):

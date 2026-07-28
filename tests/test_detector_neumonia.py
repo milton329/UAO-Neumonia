@@ -12,15 +12,39 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from detector_neumonia import App
+from app.detector_neumonia import App
 
 
 @pytest.fixture
 def app():
     """Crea una instancia de App sin ejecutar __init__ (sin abrir ventana),
-    lista para que cada test le agregue los atributos que necesite."""
+    lista para que cada test le agregue los atributos que necesite.
+
+    Incluye por defecto root/progress/button1, que usa _set_processing()
+    (llamado desde run_model) en cualquier flujo que llegue a predecir.
+    root.after se ejecuta de inmediato (no hay hilo de eventos real en los
+    tests), simulando el "volver al hilo principal" de la app real.
+    """
     instance = App.__new__(App)
+    instance.root = Mock()
+    instance.root.after.side_effect = lambda _delay, func, *a: func(*a)
+    instance.progress = Mock()
+    instance.button1 = {}
     return instance
+
+
+@pytest.fixture
+def sync_thread():
+    """Reemplaza threading.Thread para que el 'hilo' de predicción corra de
+    forma síncrona en el mismo hilo del test, en vez de en paralelo."""
+    with patch("app.detector_neumonia.threading.Thread") as mock_thread_cls:
+        def fake_thread(target=None, daemon=None):
+            fake = Mock()
+            fake.start.side_effect = target
+            return fake
+
+        mock_thread_cls.side_effect = fake_thread
+        yield mock_thread_cls
 
 
 # ---------------------------------------------------------------------
@@ -60,10 +84,10 @@ def test_cedula_paciente(app, raw_input, expected):
         ("C:/imagenes/paciente1.DCM", False),  # el chequeo es sensible a mayúsculas
     ],
 )
-@patch("detector_neumonia.ImageTk.PhotoImage")
-@patch("detector_neumonia.read_jpg_file")
-@patch("detector_neumonia.read_dicom_file")
-@patch("detector_neumonia.filedialog.askopenfilename")
+@patch("app.detector_neumonia.ImageTk.PhotoImage")
+@patch("app.detector_neumonia.read_jpg_file")
+@patch("app.detector_neumonia.read_dicom_file")
+@patch("app.detector_neumonia.filedialog.askopenfilename")
 def test_load_img_file_chooses_reader_based_on_extension(
     mock_dialog, mock_read_dicom, mock_read_jpg, mock_photo, app,
     filepath, expects_dicom_reader,
@@ -86,9 +110,9 @@ def test_load_img_file_chooses_reader_based_on_extension(
     assert app.button1["state"] == "normal"
 
 
-@patch("detector_neumonia.read_jpg_file")
-@patch("detector_neumonia.read_dicom_file")
-@patch("detector_neumonia.filedialog.askopenfilename")
+@patch("app.detector_neumonia.read_jpg_file")
+@patch("app.detector_neumonia.read_dicom_file")
+@patch("app.detector_neumonia.filedialog.askopenfilename")
 def test_load_img_file_does_nothing_when_user_cancels_dialog(
     mock_dialog, mock_read_dicom, mock_read_jpg, app
 ):
@@ -103,9 +127,9 @@ def test_load_img_file_does_nothing_when_user_cancels_dialog(
     assert app.button1["state"] == "disabled"
 
 
-@patch("detector_neumonia.ImageTk.PhotoImage")
-@patch("detector_neumonia.read_jpg_file")
-@patch("detector_neumonia.filedialog.askopenfilename")
+@patch("app.detector_neumonia.ImageTk.PhotoImage")
+@patch("app.detector_neumonia.read_jpg_file")
+@patch("app.detector_neumonia.filedialog.askopenfilename")
 def test_load_img_file_resizes_image_to_250x250(mock_dialog, mock_read_jpg, mock_photo, app):
     mock_dialog.return_value = "C:/imagenes/paciente1.jpg"
     fake_array = MagicMock()
@@ -135,11 +159,12 @@ def test_load_img_file_resizes_image_to_250x250(mock_dialog, mock_read_jpg, mock
         ("Normal", 99.999, "100.00%"),
     ],
 )
-@patch("detector_neumonia.ImageTk.PhotoImage")
-@patch("detector_neumonia.Image.fromarray")
-@patch("detector_neumonia.predict")
+@patch("app.detector_neumonia.ImageTk.PhotoImage")
+@patch("app.detector_neumonia.Image.fromarray")
+@patch("app.detector_neumonia.predict")
 def test_run_model_updates_label_and_probability(
-    mock_predict, mock_fromarray, mock_photo, app, label, proba, expected_text
+    mock_predict, mock_fromarray, mock_photo, app, sync_thread,
+    label, proba, expected_text,
 ):
     mock_predict.return_value = (label, proba, MagicMock())
     mock_fromarray.return_value.resize.return_value = MagicMock()
@@ -156,10 +181,12 @@ def test_run_model_updates_label_and_probability(
     assert app.text3.insert.call_args[0][1] == expected_text
 
 
-@patch("detector_neumonia.ImageTk.PhotoImage")
-@patch("detector_neumonia.Image.fromarray")
-@patch("detector_neumonia.predict")
-def test_run_model_passes_loaded_array_to_predict(mock_predict, mock_fromarray, mock_photo, app):
+@patch("app.detector_neumonia.ImageTk.PhotoImage")
+@patch("app.detector_neumonia.Image.fromarray")
+@patch("app.detector_neumonia.predict")
+def test_run_model_passes_loaded_array_to_predict(
+    mock_predict, mock_fromarray, mock_photo, app, sync_thread
+):
     mock_predict.return_value = ("Normal", 50.0, MagicMock())
     app.array = MagicMock()
     app.text1 = Mock()
@@ -173,10 +200,12 @@ def test_run_model_passes_loaded_array_to_predict(mock_predict, mock_fromarray, 
     mock_predict.assert_called_once_with(app.array)
 
 
-@patch("detector_neumonia.ImageTk.PhotoImage")
-@patch("detector_neumonia.Image.fromarray")
-@patch("detector_neumonia.predict")
-def test_run_model_builds_heatmap_image_from_prediction(mock_predict, mock_fromarray, mock_photo, app):
+@patch("app.detector_neumonia.ImageTk.PhotoImage")
+@patch("app.detector_neumonia.Image.fromarray")
+@patch("app.detector_neumonia.predict")
+def test_run_model_builds_heatmap_image_from_prediction(
+    mock_predict, mock_fromarray, mock_photo, app, sync_thread
+):
     fake_heatmap = MagicMock()
     mock_predict.return_value = ("Normal", 50.0, fake_heatmap)
     app.array = MagicMock()
@@ -191,12 +220,25 @@ def test_run_model_builds_heatmap_image_from_prediction(mock_predict, mock_froma
     mock_fromarray.assert_called_once_with(fake_heatmap)
 
 
-@patch("detector_neumonia.showwarning")
-@patch("detector_neumonia.predict")
-def test_run_model_blocks_prediction_when_cedula_is_empty(mock_predict, mock_showwarning, app):
+@pytest.mark.parametrize(
+    "cedula_input",
+    [
+        "",              # vacía
+        "   ",           # solo espacios
+        "12345",         # 5 dígitos, por debajo del mínimo
+        "12345678901",   # 11 dígitos, por encima del máximo (bloqueado igual por el keystroke, pero se valida aquí también)
+        "12a456",        # no numérica
+        "123 456",       # con espacio interno
+    ],
+)
+@patch("app.detector_neumonia.showwarning")
+@patch("app.detector_neumonia.predict")
+def test_run_model_blocks_prediction_when_cedula_is_invalid(
+    mock_predict, mock_showwarning, app, cedula_input
+):
     app.array = MagicMock()
     app.text1 = Mock()
-    app.text1.get.return_value = "   "
+    app.text1.get.return_value = cedula_input
 
     app.run_model()
 
@@ -205,12 +247,51 @@ def test_run_model_blocks_prediction_when_cedula_is_empty(mock_predict, mock_sho
     app.text1.focus_set.assert_called_once()
 
 
-@patch("detector_neumonia.ImageTk.PhotoImage")
-@patch("detector_neumonia.Image.fromarray")
-@patch("detector_neumonia.showwarning")
-@patch("detector_neumonia.predict")
-def test_run_model_predicts_when_cedula_is_present(
-    mock_predict, mock_showwarning, mock_fromarray, mock_photo, app
+@pytest.mark.parametrize("cedula_input", ["123456", "1234567890", "987654321"])
+@patch("app.detector_neumonia.ImageTk.PhotoImage")
+@patch("app.detector_neumonia.Image.fromarray")
+@patch("app.detector_neumonia.showwarning")
+@patch("app.detector_neumonia.predict")
+def test_run_model_predicts_when_cedula_has_valid_format(
+    mock_predict, mock_showwarning, mock_fromarray, mock_photo, app, sync_thread,
+    cedula_input,
+):
+    mock_predict.return_value = ("Normal", 50.0, MagicMock())
+    app.array = MagicMock()
+    app.text1 = Mock()
+    app.text1.get.return_value = cedula_input
+    app.text_img2 = Mock()
+    app.text2 = Mock()
+    app.text3 = Mock()
+
+    app.run_model()
+
+    mock_predict.assert_called_once_with(app.array)
+    mock_showwarning.assert_not_called()
+
+
+@patch("app.detector_neumonia.predict")
+def test_run_model_shows_progress_bar_while_predicting(mock_predict, app):
+    """No usa sync_thread a propósito: queremos observar el estado de la
+    interfaz MIENTRAS el hilo de fondo (nunca lanzado de verdad aquí,
+    solo simulado) está corriendo, antes de que termine."""
+    with patch("app.detector_neumonia.threading.Thread") as mock_thread_cls:
+        mock_thread_cls.return_value = Mock()  # start() no hace nada
+        app.array = MagicMock()
+        app.text1 = Mock()
+        app.text1.get.return_value = "123456789"
+
+        app.run_model()
+
+        assert app.button1["state"] == "disabled"
+        app.progress.start.assert_called_once()
+
+
+@patch("app.detector_neumonia.ImageTk.PhotoImage")
+@patch("app.detector_neumonia.Image.fromarray")
+@patch("app.detector_neumonia.predict")
+def test_run_model_hides_progress_bar_after_predicting(
+    mock_predict, mock_fromarray, mock_photo, app, sync_thread
 ):
     mock_predict.return_value = ("Normal", 50.0, MagicMock())
     app.array = MagicMock()
@@ -222,8 +303,45 @@ def test_run_model_predicts_when_cedula_is_present(
 
     app.run_model()
 
-    mock_predict.assert_called_once_with(app.array)
-    mock_showwarning.assert_not_called()
+    app.progress.stop.assert_called_once()
+    assert app.button1["state"] == "normal"
+
+
+@patch("app.detector_neumonia.showerror")
+@patch("app.detector_neumonia.predict")
+def test_run_model_shows_error_and_restores_button_when_predict_fails(
+    mock_predict, mock_showerror, app, sync_thread
+):
+    mock_predict.side_effect = RuntimeError("el modelo no pudo cargar")
+    app.array = MagicMock()
+    app.text1 = Mock()
+    app.text1.get.return_value = "123456789"
+
+    app.run_model()
+
+    mock_showerror.assert_called_once()
+    assert app.button1["state"] == "normal"
+    app.progress.stop.assert_called_once()
+
+
+class TestValidateCedulaKeystroke:
+    """Pruebas del validador que restringe el campo de cédula mientras se
+    escribe (solo dígitos, máximo 10 caracteres)."""
+
+    @pytest.mark.parametrize(
+        "proposed_value, expected",
+        [
+            ("", True),
+            ("1", True),
+            ("123456", True),
+            ("1234567890", True),
+            ("12345678901", False),  # 11 dígitos, supera el máximo
+            ("12a", False),
+            ("12 34", False),
+        ],
+    )
+    def test_validate_cedula_keystroke(self, proposed_value, expected):
+        assert App._validate_cedula_keystroke(proposed_value) is expected
 
 
 # ---------------------------------------------------------------------
@@ -239,7 +357,7 @@ def test_run_model_predicts_when_cedula_is_present(
         ("111", "Normal", 100.0, "111-Normal-100.00%"),
     ],
 )
-@patch("detector_neumonia.showinfo")
+@patch("app.detector_neumonia.showinfo")
 def test_save_results_csv_writes_expected_row(
     mock_showinfo, app, tmp_path, monkeypatch, cedula, label, proba, expected_row
 ):
@@ -255,7 +373,7 @@ def test_save_results_csv_writes_expected_row(
     assert expected_row in contenido
 
 
-@patch("detector_neumonia.showinfo")
+@patch("app.detector_neumonia.showinfo")
 def test_save_results_csv_shows_success_message(mock_showinfo, app, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
@@ -268,7 +386,7 @@ def test_save_results_csv_shows_success_message(mock_showinfo, app, tmp_path, mo
     mock_showinfo.assert_called_once()
 
 
-@patch("detector_neumonia.showinfo")
+@patch("app.detector_neumonia.showinfo")
 def test_save_results_csv_appends_multiple_entries(mock_showinfo, app, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
@@ -291,8 +409,8 @@ def test_save_results_csv_appends_multiple_entries(mock_showinfo, app, tmp_path,
 # delete
 # ---------------------------------------------------------------------
 
-@patch("detector_neumonia.showinfo")
-@patch("detector_neumonia.askokcancel")
+@patch("app.detector_neumonia.showinfo")
+@patch("app.detector_neumonia.askokcancel")
 def test_delete_clears_all_fields_when_user_confirms(mock_confirm, mock_showinfo, app):
     mock_confirm.return_value = True
     app.text1 = Mock()
@@ -310,7 +428,7 @@ def test_delete_clears_all_fields_when_user_confirms(mock_confirm, mock_showinfo
     app.text_img2.delete.assert_called_once_with("1.0", "end")
 
 
-@patch("detector_neumonia.askokcancel")
+@patch("app.detector_neumonia.askokcancel")
 def test_delete_does_not_clear_fields_when_user_cancels(mock_confirm, app):
     mock_confirm.return_value = False
     app.text1 = Mock()
@@ -326,8 +444,8 @@ def test_delete_does_not_clear_fields_when_user_cancels(mock_confirm, app):
     app.text3.delete.assert_not_called()
 
 
-@patch("detector_neumonia.showinfo")
-@patch("detector_neumonia.askokcancel")
+@patch("app.detector_neumonia.showinfo")
+@patch("app.detector_neumonia.askokcancel")
 def test_delete_shows_success_message_when_confirmed(mock_confirm, mock_showinfo, app):
     mock_confirm.return_value = True
     app.text1 = Mock()
@@ -341,8 +459,8 @@ def test_delete_shows_success_message_when_confirmed(mock_confirm, mock_showinfo
     mock_showinfo.assert_called_once()
 
 
-@patch("detector_neumonia.showinfo")
-@patch("detector_neumonia.askokcancel")
+@patch("app.detector_neumonia.showinfo")
+@patch("app.detector_neumonia.askokcancel")
 def test_delete_does_not_show_message_when_cancelled(mock_confirm, mock_showinfo, app):
     mock_confirm.return_value = False
     app.text1 = Mock()
@@ -356,7 +474,7 @@ def test_delete_does_not_show_message_when_cancelled(mock_confirm, mock_showinfo
     mock_showinfo.assert_not_called()
 
 
-@patch("detector_neumonia.askokcancel")
+@patch("app.detector_neumonia.askokcancel")
 def test_delete_asks_confirmation_before_clearing(mock_confirm, app):
     mock_confirm.return_value = True
     app.text1 = Mock()
@@ -382,9 +500,9 @@ def test_delete_asks_confirmation_before_clearing(mock_confirm, app):
         ("  555  ", "555"),
     ],
 )
-@patch("detector_neumonia.showinfo")
-@patch("detector_neumonia.Image.open")
-@patch("detector_neumonia.tkcap.CAP")
+@patch("app.detector_neumonia.showinfo")
+@patch("app.detector_neumonia.Image.open")
+@patch("app.detector_neumonia.tkcap.CAP")
 def test_create_pdf_names_file_with_patient_id(
     mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch,
     cedula_input, expected_filename_id,
@@ -406,9 +524,9 @@ def test_create_pdf_names_file_with_patient_id(
     mock_img.save.assert_called_once_with(expected_pdf)
 
 
-@patch("detector_neumonia.showinfo")
-@patch("detector_neumonia.Image.open")
-@patch("detector_neumonia.tkcap.CAP")
+@patch("app.detector_neumonia.showinfo")
+@patch("app.detector_neumonia.Image.open")
+@patch("app.detector_neumonia.tkcap.CAP")
 def test_create_pdf_converts_image_to_rgb(
     mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch
 ):
@@ -426,9 +544,9 @@ def test_create_pdf_converts_image_to_rgb(
     mock_img.convert.assert_called_once_with("RGB")
 
 
-@patch("detector_neumonia.showinfo")
-@patch("detector_neumonia.Image.open")
-@patch("detector_neumonia.tkcap.CAP")
+@patch("app.detector_neumonia.showinfo")
+@patch("app.detector_neumonia.Image.open")
+@patch("app.detector_neumonia.tkcap.CAP")
 def test_create_pdf_shows_success_message(
     mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch
 ):
@@ -447,9 +565,9 @@ def test_create_pdf_shows_success_message(
     mock_showinfo.assert_called_once()
 
 
-@patch("detector_neumonia.showinfo")
-@patch("detector_neumonia.Image.open")
-@patch("detector_neumonia.tkcap.CAP")
+@patch("app.detector_neumonia.showinfo")
+@patch("app.detector_neumonia.Image.open")
+@patch("app.detector_neumonia.tkcap.CAP")
 def test_create_pdf_captures_the_app_window(
     mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch
 ):

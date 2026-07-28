@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-from load_model import model_fun
-from preprocess_img import preprocess
+from app.load_model import model_fun
+from app.preprocess_img import preprocess
 
 
 def grad_cam(array):
