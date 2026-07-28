@@ -8,12 +8,12 @@ import threading
 from tkinter import END, StringVar, Text, filedialog
 from tkinter.messagebox import WARNING, askokcancel, showerror, showinfo, showwarning
 
-import tkcap
 import ttkbootstrap as ttk
 from PIL import Image, ImageTk
 
 from app.integrator import predict
 from app.read_img import read_dicom_file, read_jpg_file
+from app.window_capture import capture_window
 
 REPORTS_DIR = "reportes"
 CEDULA_PATTERN = re.compile(r"^\d{6,10}$")
@@ -290,10 +290,9 @@ class App:
         reportes de pacientes distintos."""
         cedula = self._cedula_paciente()
         os.makedirs(REPORTS_DIR, exist_ok=True)
-        cap = tkcap.CAP(self.root)
-        ID = os.path.join(REPORTS_DIR, f"Reporte_{cedula}.jpg")
-        img = cap.capture(ID)
-        img = Image.open(ID)
+        img = capture_window(self.root)
+        jpg_path = os.path.join(REPORTS_DIR, f"Reporte_{cedula}.jpg")
+        img.save(jpg_path)
         img = img.convert("RGB")
         pdf_path = os.path.join(REPORTS_DIR, f"Reporte_{cedula}.pdf")
         img.save(pdf_path)

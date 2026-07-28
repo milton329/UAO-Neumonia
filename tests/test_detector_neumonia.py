@@ -501,43 +501,36 @@ def test_delete_asks_confirmation_before_clearing(mock_confirm, app):
     ],
 )
 @patch("app.detector_neumonia.showinfo")
-@patch("app.detector_neumonia.Image.open")
-@patch("app.detector_neumonia.tkcap.CAP")
+@patch("app.detector_neumonia.capture_window")
 def test_create_pdf_names_file_with_patient_id(
-    mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch,
+    mock_capture_window, mock_showinfo, app, tmp_path, monkeypatch,
     cedula_input, expected_filename_id,
 ):
     monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
     app.text1.get.return_value = cedula_input
     app.root = Mock()
-    mock_cap_instance = mock_cap_cls.return_value
+    mock_img = mock_capture_window.return_value
+    mock_img.convert.return_value = mock_img
     expected_jpg = os.path.join("reportes", f"Reporte_{expected_filename_id}.jpg")
     expected_pdf = os.path.join("reportes", f"Reporte_{expected_filename_id}.pdf")
-    mock_cap_instance.capture.return_value = expected_jpg
-    mock_img = mock_open.return_value
-    mock_img.convert.return_value = mock_img
 
     app.create_pdf()
 
-    mock_cap_instance.capture.assert_called_once_with(expected_jpg)
-    mock_img.save.assert_called_once_with(expected_pdf)
+    mock_img.save.assert_any_call(expected_jpg)
+    mock_img.save.assert_any_call(expected_pdf)
 
 
 @patch("app.detector_neumonia.showinfo")
-@patch("app.detector_neumonia.Image.open")
-@patch("app.detector_neumonia.tkcap.CAP")
+@patch("app.detector_neumonia.capture_window")
 def test_create_pdf_converts_image_to_rgb(
-    mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch
+    mock_capture_window, mock_showinfo, app, tmp_path, monkeypatch
 ):
     monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
     app.text1.get.return_value = "123456789"
     app.root = Mock()
-    mock_cap_cls.return_value.capture.return_value = os.path.join(
-        "reportes", "Reporte_123456789.jpg"
-    )
-    mock_img = mock_open.return_value
+    mock_img = mock_capture_window.return_value
 
     app.create_pdf()
 
@@ -545,19 +538,15 @@ def test_create_pdf_converts_image_to_rgb(
 
 
 @patch("app.detector_neumonia.showinfo")
-@patch("app.detector_neumonia.Image.open")
-@patch("app.detector_neumonia.tkcap.CAP")
+@patch("app.detector_neumonia.capture_window")
 def test_create_pdf_shows_success_message(
-    mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch
+    mock_capture_window, mock_showinfo, app, tmp_path, monkeypatch
 ):
     monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
     app.text1.get.return_value = "123456789"
     app.root = Mock()
-    mock_cap_cls.return_value.capture.return_value = os.path.join(
-        "reportes", "Reporte_123456789.jpg"
-    )
-    mock_img = mock_open.return_value
+    mock_img = mock_capture_window.return_value
     mock_img.convert.return_value = mock_img
 
     app.create_pdf()
@@ -566,23 +555,19 @@ def test_create_pdf_shows_success_message(
 
 
 @patch("app.detector_neumonia.showinfo")
-@patch("app.detector_neumonia.Image.open")
-@patch("app.detector_neumonia.tkcap.CAP")
+@patch("app.detector_neumonia.capture_window")
 def test_create_pdf_captures_the_app_window(
-    mock_cap_cls, mock_open, mock_showinfo, app, tmp_path, monkeypatch
+    mock_capture_window, mock_showinfo, app, tmp_path, monkeypatch
 ):
     monkeypatch.chdir(tmp_path)
     app.text1 = Mock()
     app.text1.get.return_value = "123456789"
     app.root = Mock()
-    mock_cap_cls.return_value.capture.return_value = os.path.join(
-        "reportes", "Reporte_123456789.jpg"
-    )
-    mock_img = mock_open.return_value
+    mock_img = mock_capture_window.return_value
     mock_img.convert.return_value = mock_img
 
     app.create_pdf()
 
-    mock_cap_cls.assert_called_once_with(app.root)
+    mock_capture_window.assert_called_once_with(app.root)
 
     # Para correr en el terminak -> uv run pytest tests/test_detector_neumonia.py -v
