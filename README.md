@@ -55,6 +55,7 @@ flowchart TD
     gc --> prep
     gc --> model
     model -.lee.-> h5[("models/conv_MLP_84.h5")]
+    gui -->|PDF| cap[app/window_capture.py]
 ```
 
 | Módulo | Responsabilidad |
@@ -66,6 +67,7 @@ flowchart TD
 | `app/load_model.py` | Carga (una sola vez, con caché) el modelo entrenado desde `models/conv_MLP_84.h5`. |
 | `app/grad_cam.py` | Genera el mapa de calor Grad-CAM sobre la imagen, usando `tf.GradientTape`. |
 | `app/integrator.py` | Orquesta preprocesamiento → predicción → Grad-CAM y devuelve `(label, proba, heatmap)` a la interfaz. |
+| `app/window_capture.py` | Captura la ventana para el reporte JPG/PDF. En Windows usa la API `PrintWindow` (renderiza la ventana directo a un bitmap); en otras plataformas cae a un recorte de pantalla vía `pyautogui`/`tkcap`. |
 
 ### Árbol de archivos
 
@@ -80,7 +82,8 @@ UAO-Neumonia/
 │   ├── read_img.py           # lectura de DICOM / JPG / PNG
 │   ├── preprocess_img.py     # preprocesamiento de la imagen
 │   ├── load_model.py         # carga del modelo entrenado
-│   └── grad_cam.py           # generación del heatmap Grad-CAM
+│   ├── grad_cam.py           # generación del heatmap Grad-CAM
+│   └── window_capture.py     # captura de la ventana para el reporte JPG/PDF
 ├── models/
 │   └── conv_MLP_84.h5        # no versionado en git (~117MB), ver Instalación
 ├── reportes/                 # historial.csv y PDFs generados por la app (no versionado)
@@ -128,7 +131,7 @@ cd UAO-Neumonia
 uv sync
 ```
 
-`uv sync` crea el entorno virtual (`.venv/`) y resuelve las dependencias exactas del `uv.lock`, sin necesidad de `pip install -r requirements.txt` ni de activar el entorno manualmente.
+`uv sync` crea el entorno virtual (`.venv/`) y resuelve las dependencias exactas del `uv.lock`, sin necesidad de `pip install -r requirements.txt` ni de activar el entorno manualmente. En Windows esto instala además `pywin32`, usado por `app/window_capture.py` para exportar el reporte en PDF.
 
 **El modelo entrenado no viaja en git** (pesa ~117MB). Copia `conv_MLP_84.h5` dentro de `models/` antes de ejecutar la app:
 
@@ -155,7 +158,7 @@ Ver [Makefile](#makefile) para el resto de comandos disponibles, o [Docker](#doc
 2. Presiona **Cargar Imagen** y selecciona un archivo DICOM, JPG o PNG.
 3. Presiona **Predecir** y espera unos segundos hasta ver el resultado y el heatmap.
 4. Presiona **Guardar** para agregar el resultado al historial (`historial.csv`).
-5. Presiona **PDF** para exportar un reporte (`Reporte_<cédula>.pdf`).
+5. Presiona **PDF** para exportar un reporte (`Reporte_<cédula>.pdf`). En Windows la ventana se captura con `PrintWindow` (ver [Arquitectura](#arquitectura)), por lo que el reporte sale correcto aunque la ventana esté tapada por otra o sin foco en ese momento.
 6. Presiona **Borrar** para limpiar la interfaz y cargar una nueva imagen.
 
 ## Pruebas unitarias
