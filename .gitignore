@@ -87,6 +87,9 @@ models/*
 # organizados en la carpeta reportes/)
 # -----------------------------------------------------------------------------
 reportes/
+historial.csv
+Reporte*.jpg
+Reporte*.pdf
 
 # -----------------------------------------------------------------------------
 # Editores / IDEs
