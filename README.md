@@ -46,12 +46,12 @@ El proyecto es modular: la interfaz gráfica no contiene lógica de inferencia, 
 
 ```mermaid
 flowchart TD
-    main[main.py] --> gui["detector_neumonia.py<br/>Interfaz Tkinter"]
-    gui -->|Cargar Imagen| read[read_img.py]
-    gui -->|Predecir| integ[integrator.py]
-    integ --> prep[preprocess_img.py]
-    integ --> model[load_model.py]
-    integ --> gc[grad_cam.py]
+    main[main.py] --> gui["app/detector_neumonia.py<br/>Interfaz Tkinter"]
+    gui -->|Cargar Imagen| read[app/read_img.py]
+    gui -->|Predecir| integ[app/integrator.py]
+    integ --> prep[app/preprocess_img.py]
+    integ --> model[app/load_model.py]
+    integ --> gc[app/grad_cam.py]
     gc --> prep
     gc --> model
     model -.lee.-> h5[("models/conv_MLP_84.h5")]
@@ -59,13 +59,13 @@ flowchart TD
 
 | Módulo | Responsabilidad |
 |---|---|
-| `main.py` | Punto de entrada de la aplicación. |
-| `detector_neumonia.py` | Interfaz gráfica (Tkinter): carga de imágenes, botones, historial y exportación a PDF. No contiene lógica de inferencia. |
-| `read_img.py` | Lee un archivo DICOM o JPG/PNG y lo convierte a un array numpy listo para preprocesar. |
-| `preprocess_img.py` | Preprocesa el array: resize a 512×512, escala de grises, ecualización CLAHE, normalización 0–1, formato de batch. |
-| `load_model.py` | Carga (una sola vez, con caché) el modelo entrenado desde `models/conv_MLP_84.h5`. |
-| `grad_cam.py` | Genera el mapa de calor Grad-CAM sobre la imagen, usando `tf.GradientTape`. |
-| `integrator.py` | Orquesta preprocesamiento → predicción → Grad-CAM y devuelve `(label, proba, heatmap)` a la interfaz. |
+| `main.py` | Punto de entrada de la aplicación (fuera del paquete `app/`, es el único script suelto). |
+| `app/detector_neumonia.py` | Interfaz gráfica (Tkinter/ttkbootstrap): carga de imágenes, botones, historial y exportación a PDF. No contiene lógica de inferencia. |
+| `app/read_img.py` | Lee un archivo DICOM o JPG/PNG y lo convierte a un array numpy listo para preprocesar. |
+| `app/preprocess_img.py` | Preprocesa el array: resize a 512×512, escala de grises, ecualización CLAHE, normalización 0–1, formato de batch. |
+| `app/load_model.py` | Carga (una sola vez, con caché) el modelo entrenado desde `models/conv_MLP_84.h5`. |
+| `app/grad_cam.py` | Genera el mapa de calor Grad-CAM sobre la imagen, usando `tf.GradientTape`. |
+| `app/integrator.py` | Orquesta preprocesamiento → predicción → Grad-CAM y devuelve `(label, proba, heatmap)` a la interfaz. |
 
 ### Árbol de archivos
 
@@ -73,21 +73,25 @@ flowchart TD
 UAO-Neumonia/
 ├── .github/
 │   └── pull_request_template.md
+├── app/
+│   ├── __init__.py
+│   ├── detector_neumonia.py  # interfaz gráfica (Tkinter)
+│   ├── integrator.py         # orquesta el flujo de predicción
+│   ├── read_img.py           # lectura de DICOM / JPG / PNG
+│   ├── preprocess_img.py     # preprocesamiento de la imagen
+│   ├── load_model.py         # carga del modelo entrenado
+│   └── grad_cam.py           # generación del heatmap Grad-CAM
 ├── models/
 │   └── conv_MLP_84.h5        # no versionado en git (~117MB), ver Instalación
+├── reportes/                 # historial.csv y PDFs generados por la app (no versionado)
 ├── tests/
 │   ├── conftest.py
+│   ├── test_detector_neumonia.py
 │   ├── test_grad_cam.py
 │   ├── test_integrator.py
 │   ├── test_load_model.py
 │   ├── test_preprocess_img.py
 │   └── test_read_img.py
-├── detector_neumonia.py      # interfaz gráfica (Tkinter)
-├── integrator.py             # orquesta el flujo de predicción
-├── read_img.py               # lectura de DICOM / JPG / PNG
-├── preprocess_img.py         # preprocesamiento de la imagen
-├── load_model.py             # carga del modelo entrenado
-├── grad_cam.py                # generación del heatmap Grad-CAM
 ├── main.py                   # punto de entrada
 ├── Dockerfile
 ├── .dockerignore

@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from preprocess_img import preprocess
+from app.preprocess_img import preprocess
 
 
 def _bgr_image(height, width, value=128):

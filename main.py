@@ -1,4 +1,4 @@
-from detector_neumonia import main as run_app
+from app.detector_neumonia import main as run_app
 
 if __name__ == "__main__":
     run_app()
